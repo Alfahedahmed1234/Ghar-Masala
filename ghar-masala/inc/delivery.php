@@ -18,6 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 function gm_delivery_rules() {
 	return array(
 		'from'       => gm_setting( 'delivery_from' ),
+		'area'       => gm_setting( 'delivery_area' ) ? gm_setting( 'delivery_area' ) : gm_setting( 'delivery_from' ),
 		'free_miles' => (float) gm_setting( 'free_miles' ),
 		'per_mile'   => (int) round( (float) gm_setting( 'per_mile' ) * 100 ),
 		'max_miles'  => (float) gm_setting( 'max_miles' ),
@@ -115,11 +116,11 @@ function gm_delivery_quote( $postcode ) {
 		}
 		$quote['ok']      = false;
 		$quote['message'] = sprintf(
-			'Sorry — %s is %s miles away. We deliver up to %s miles from %s. Ring the kitchen if you think that is wrong.',
+			'Sorry — %s is %s miles away. We deliver up to %s miles from %s.',
 			$to['postcode'],
 			$shown,
 			gm_number( $rules['max_miles'] ),
-			$rules['from']
+			$rules['area']
 		);
 		return $quote;
 	}
@@ -147,7 +148,7 @@ function gm_delivery_summary() {
 	return sprintf(
 		'Free within %s miles of %s, then %s for each extra mile, up to %s miles.',
 		gm_number( $r['free_miles'] ),
-		$r['from'],
+		$r['area'],
 		gm_money( $r['per_mile'] ),
 		gm_number( $r['max_miles'] )
 	);

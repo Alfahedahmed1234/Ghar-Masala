@@ -288,7 +288,7 @@ $gm_signed_in = is_user_logged_in();
 				<p class="gm-soft" style="max-width:46ch;margin:0 0 26px">We deliver ourselves, out of Tividale, from Sunday to Thursday between 6 and 10pm. Because every order is booked against a slot, your food is timed to land when you asked for it.</p>
 				<div class="gm-facts">
 					<?php $gm_dr = gm_delivery_rules(); ?>
-					<div><span>Within <?php echo esc_html( gm_number( $gm_dr['free_miles'] ) ); ?> miles of <?php echo esc_html( $gm_dr['from'] ); ?></span><span>Free</span></div>
+					<div><span>Within <?php echo esc_html( gm_number( $gm_dr['free_miles'] ) ); ?> miles of <?php echo esc_html( $gm_dr['area'] ); ?></span><span>Free</span></div>
 					<div><span>Each extra mile</span><span><?php echo esc_html( gm_money( $gm_dr['per_mile'] ) ); ?></span></div>
 					<div><span>Furthest we deliver</span><span><?php echo esc_html( gm_number( $gm_dr['max_miles'] ) ); ?> miles</span></div>
 					<div><span>Minimum order</span><span>£10</span></div>
@@ -382,21 +382,39 @@ $gm_signed_in = is_user_logged_in();
 			</div>
 		</div>
 		<div class="gm-panel">
-			<h3 class="gm-label">Sign in</h3>
-			<form method="post" action="<?php echo esc_url( wp_login_url() ); ?>" class="gm-form">
-				<div class="field"><label for="gm-log">Email or username</label><input class="input" id="gm-log" name="log" type="text" autocomplete="username" placeholder="you@example.com" required></div>
-				<div class="field"><label for="gm-pwd">Password</label><input class="input" id="gm-pwd" name="pwd" type="password" autocomplete="current-password" placeholder="••••••••" required></div>
-				<label class="gm-check"><input type="checkbox" name="rememberme" value="forever"> Keep me signed in</label>
-				<input type="hidden" name="redirect_to" value="<?php echo esc_url( gm_view_url( 'account' ) ); ?>">
-				<button type="submit" class="gm-btn gm-btn--block">Sign in</button>
-				<a class="gm-small" href="<?php echo esc_url( wp_lostpassword_url( gm_view_url( 'login' ) ) ); ?>">Forgotten your password?</a>
-			</form>
-			<?php if ( get_option( 'users_can_register' ) ) : ?>
+			<?php /* Sign in. Posts to wp-login.php only if JavaScript is off; app.js signs in on-site. */ ?>
+			<div data-gm-auth="login">
+				<h3 class="gm-label">Sign in</h3>
+				<form method="post" action="<?php echo esc_url( wp_login_url() ); ?>" class="gm-form" data-gm-login novalidate>
+					<div class="field"><label for="gm-log">Email</label><input class="input" id="gm-log" name="log" type="text" autocomplete="username" placeholder="you@example.com" required></div>
+					<div class="field"><label for="gm-pwd">Password</label><input class="input" id="gm-pwd" name="pwd" type="password" autocomplete="current-password" placeholder="••••••••" required></div>
+					<label class="gm-check"><input type="checkbox" name="rememberme" value="forever" checked> Keep me signed in</label>
+					<input type="hidden" name="redirect_to" value="<?php echo esc_url( gm_view_url( 'account' ) ); ?>">
+					<p class="gm-error" data-gm-auth-error role="alert" hidden></p>
+					<button type="submit" class="gm-btn gm-btn--block">Sign in</button>
+					<a class="gm-small" href="<?php echo esc_url( wp_lostpassword_url( gm_view_url( 'login' ) ) ); ?>">Forgotten your password?</a>
+				</form>
 				<div class="gm-panel__foot">
 					<p class="gm-small gm-muted">First time ordering? Create an account and your details are saved for next time.</p>
-					<a class="gm-btn-outline gm-btn-outline--block" href="<?php echo esc_url( wp_registration_url() ); ?>">Create an account</a>
+					<a class="gm-btn-outline gm-btn-outline--block" href="#register">Create an account</a>
 				</div>
-			<?php endif; ?>
+			</div>
+
+			<div data-gm-auth="register" hidden>
+				<h3 class="gm-label">Create an account</h3>
+				<form class="gm-form" data-gm-register novalidate>
+					<div class="field"><label for="gm-reg-name">Name</label><input class="input" id="gm-reg-name" name="name" type="text" autocomplete="name" placeholder="Your name" required></div>
+					<div class="field"><label for="gm-reg-email">Email</label><input class="input" id="gm-reg-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required></div>
+					<div class="field"><label for="gm-reg-pass">Password</label><input class="input" id="gm-reg-pass" name="password" type="password" autocomplete="new-password" placeholder="At least 8 characters" minlength="8" required></div>
+					<div class="gm-hp" aria-hidden="true"><label for="gm-reg-website">Website</label><input id="gm-reg-website" name="website" type="text" tabindex="-1" autocomplete="off"></div>
+					<p class="gm-error" data-gm-auth-error role="alert" hidden></p>
+					<button type="submit" class="gm-btn gm-btn--block">Create my account</button>
+				</form>
+				<div class="gm-panel__foot">
+					<p class="gm-small gm-muted">Already have an account?</p>
+					<a class="gm-btn-outline gm-btn-outline--block" href="#login">Sign in</a>
+				</div>
+			</div>
 		</div>
 	</div>
 </section>

@@ -10,7 +10,7 @@ Unlike the design prototype, this version takes real orders:
 - **Delivery charge from the postcode.** As soon as a customer types their postcode at checkout, the site works out how far it is from B69 1NY. Up to 2 miles is free, then it's £1 for each extra mile started (2.4 miles = £1). Postcodes more than 3 miles away can't check out. The charge is worked out again on the server when the order is placed, so the page can't be tricked into skipping it. You can change all of these numbers in **Settings → Ghar Masala → Delivery charge**.
 - **Checkout.** Customers can pay on delivery, or pay by card through Stripe if you add your Stripe keys. Card numbers are typed on Stripe's own page and never reach your website.
 - **Orders in WordPress.** Each order shows up under **Orders** in the dashboard. An email goes to the kitchen and another to the customer.
-- **Customer accounts.** Customers see their order history, can reorder with one tap, and get their address filled in at checkout.
+- **Customer accounts.** Customers create an account and sign in on the site itself, without ever seeing a WordPress page. They see their order history, can reorder with one tap, and get their address filled in at checkout. New accounts are always ordinary customer accounts ("Subscriber"), and WordPress's own "Anyone can register" setting isn't needed.
 
 ## Install on Hostinger
 
@@ -21,11 +21,11 @@ Unlike the design prototype, this version takes real orders:
 5. Go to **Settings → Ghar Masala** and check:
    - the kitchen phone number and public email
    - **Send new orders to:** the inbox that should receive order emails
-   - **Delivery charge:** kitchen postcode (B69 1NY), free radius (2 miles), price per extra mile (£1) and the furthest you deliver (3 miles).
+   - **Delivery charge:** kitchen postcode (B69 1NY), how the area is described to customers ("Tividale Viewpoint B69"), free radius (2 miles), price per extra mile (£1) and the furthest you deliver (3 miles).
    - **Card payments:** see below. The **Pay by card** option only appears once your Stripe key is in, and the dashboard reminds you until it is.
-6. Optional: to let customers create accounts, go to **Settings → General** and tick **Anyone can register** with the role **Subscriber**.
-7. **Emails:** Hostinger's default PHP mail often lands in spam. Create a mailbox in hPanel (for example orders@yourdomain), then install the free **WP Mail SMTP** plugin and connect it to that mailbox.
-8. **Caching:** if you use **LiteSpeed Cache**, the theme already tells it not to cache live slot data or checkout pages. After you change the menu, purge the cache with **LiteSpeed Cache → Purge All**.
+6. **Emails** are sent from "Ghar Masala". Hostinger's default PHP mail often lands in spam. Create a mailbox in hPanel (for example orders@yourdomain), then install the free **WP Mail SMTP** plugin and connect it to that mailbox.
+   If you use WP Mail SMTP, set its **From Name** to "Ghar Masala" too, because its setting overrides the theme's.
+7. **Caching:** if you use **LiteSpeed Cache**, the theme already tells it not to cache live slot data or checkout pages. After you change the menu, purge the cache with **LiteSpeed Cache → Purge All**.
 
 ### Card payments (Stripe)
 

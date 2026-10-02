@@ -98,6 +98,8 @@
 			view = hash === 'order' ? 'menu' : 'how';
 		}
 		if (!view || view === 'top') view = 'home';
+		var authMode = view === 'register' ? 'register' : 'login';
+		if (view === 'register') view = 'login';
 		if (view === 'account' && !C.loggedIn) view = 'login';
 		if (view === 'login' && C.loggedIn) view = 'account';
 		if (VIEWS.indexOf(view) === -1) return; // an ordinary in-page anchor
@@ -105,6 +107,10 @@
 		if (view === 'done' && !state.order) view = 'home';
 
 		show(view);
+		if (view === 'login') {
+			$$('[data-gm-auth]').forEach(function (el) { el.hidden = el.getAttribute('data-gm-auth') !== authMode; });
+			$$('[data-gm-auth-error]').forEach(function (el) { el.hidden = true; });
+		}
 		if (scrollTo) {
 			var target = document.getElementById(scrollTo);
 			if (target) target.scrollIntoView();
@@ -516,6 +522,54 @@
 	document.addEventListener('change', function (e) {
 		if (e.target.name === 'payment') updatePayButton();
 	});
+
+	/* ------------------------------------------------------------ sign in / create account */
+
+	function authSubmit(form, endpoint, fields, busyLabel) {
+		form.addEventListener('submit', function (e) {
+			e.preventDefault();
+			var errorBox = $('[data-gm-auth-error]', form);
+			var button = $('button[type="submit"]', form);
+			var missing = $$('input[required]', form).filter(function (i) { return !i.value.trim() || !i.checkValidity(); })[0];
+			if (missing) {
+				errorBox.textContent = missing.type === 'password' && missing.value
+					? 'Please choose a password of at least 8 characters.'
+					: 'Please enter your ' + missing.labels[0].textContent.toLowerCase() + '.';
+				errorBox.hidden = false;
+				missing.focus();
+				return;
+			}
+			var payload = {};
+			fields.forEach(function (k) {
+				var input = form.elements[k];
+				payload[k] = input ? (input.type === 'checkbox' ? input.checked : input.value) : '';
+			});
+			if (endpoint === 'account/login') payload.remember = form.elements.rememberme.checked;
+			var label = button.textContent;
+			button.disabled = true;
+			button.textContent = busyLabel;
+			errorBox.hidden = true;
+			fetch(C.rest + endpoint, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+				.then(function (r) { return r.json().then(function (body) { return { ok: r.ok, body: body }; }); })
+				.then(function (res) {
+					if (!res.ok) throw res.body;
+					// Reload so the page is rebuilt for the signed-in customer.
+					location.replace(location.pathname + '#account');
+					location.reload();
+				})
+				.catch(function (err) {
+					errorBox.textContent = (err && err.message) || 'Something went wrong — please try again.';
+					errorBox.hidden = false;
+					button.disabled = false;
+					button.textContent = label;
+				});
+		});
+	}
+
+	var loginForm = $('[data-gm-login]');
+	if (loginForm) authSubmit(loginForm, 'account/login', ['log', 'pwd'], 'Signing in…');
+	var registerForm = $('[data-gm-register]');
+	if (registerForm) authSubmit(registerForm, 'account/register', ['name', 'email', 'password', 'website'], 'Creating your account…');
 
 	var payForm = $('[data-gm-pay]');
 	if (payForm) payForm.addEventListener('submit', submitOrder);

@@ -7,12 +7,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'GM_VERSION', '1.0.0' );
+define( 'GM_VERSION', '1.1.0' );
+
+/** Cache-busting version: changes whenever the file does. */
+function gm_ver( $file ) {
+	$mtime = @filemtime( get_template_directory() . '/' . $file );
+	return $mtime ? GM_VERSION . '.' . $mtime : GM_VERSION;
+}
 
 require get_template_directory() . '/inc/data.php';
 require get_template_directory() . '/inc/settings.php';
 require get_template_directory() . '/inc/orders.php';
 require get_template_directory() . '/inc/delivery.php';
+require get_template_directory() . '/inc/accounts.php';
 require get_template_directory() . '/inc/stripe.php';
 require get_template_directory() . '/inc/rest.php';
 
@@ -40,13 +47,13 @@ function gm_view_url( $view = '' ) {
 }
 
 add_action( 'wp_enqueue_scripts', function () {
-	wp_enqueue_style( 'ghar-masala', get_stylesheet_uri(), array(), GM_VERSION );
+	wp_enqueue_style( 'ghar-masala', get_stylesheet_uri(), array(), gm_ver( 'style.css' ) );
 
 	if ( ! is_front_page() ) {
 		return;
 	}
 
-	wp_enqueue_script( 'ghar-masala', gm_asset( 'js/app.js' ), array(), GM_VERSION, array( 'in_footer' => true ) );
+	wp_enqueue_script( 'ghar-masala', gm_asset( 'js/app.js' ), array(), gm_ver( 'assets/js/app.js' ), array( 'in_footer' => true ) );
 
 	$menu = array();
 	foreach ( gm_menu() as $group ) {

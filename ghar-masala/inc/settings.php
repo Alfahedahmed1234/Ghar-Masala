@@ -14,6 +14,7 @@ function gm_setting_defaults() {
 		'order_email'    => '',
 		'days_ahead'     => 7,
 		'delivery_from'  => 'B69 1NY',
+		'delivery_area'  => 'Tividale Viewpoint B69',
 		'free_miles'     => 2,
 		'per_mile'       => 1.00,
 		'max_miles'      => 3,
@@ -75,6 +76,7 @@ function gm_sanitize_settings( $input ) {
 		'order_email'    => sanitize_email( $input['order_email'] ?? '' ),
 		'days_ahead'     => max( 1, min( 14, (int) ( $input['days_ahead'] ?? 7 ) ) ),
 		'delivery_from'  => gm_postcode_key( $input['delivery_from'] ?? '' ) ? strtoupper( sanitize_text_field( $input['delivery_from'] ) ) : 'B69 1NY',
+		'delivery_area'  => sanitize_text_field( $input['delivery_area'] ?? '' ),
 		'free_miles'     => max( 0, round( (float) ( $input['free_miles'] ?? 2 ), 1 ) ),
 		'per_mile'       => max( 0, round( (float) ( $input['per_mile'] ?? 1 ), 2 ) ),
 		'max_miles'      => max( 0.5, round( (float) ( $input['max_miles'] ?? 3 ), 1 ) ),
@@ -120,7 +122,11 @@ function gm_render_settings_page() {
 			<p>Worked out at checkout from the customer's postcode, as the crow flies from the kitchen.</p>
 			<table class="form-table" role="presentation">
 				<tr><th scope="row"><label for="gm-from">Kitchen postcode</label></th>
-					<td><input class="regular-text" id="gm-from" name="gm_settings[delivery_from]" value="<?php echo esc_attr( $o['delivery_from'] ); ?>"></td></tr>
+					<td><input class="regular-text" id="gm-from" name="gm_settings[delivery_from]" value="<?php echo esc_attr( $o['delivery_from'] ); ?>">
+					<p class="description">Distances are measured from here.</p></td></tr>
+				<tr><th scope="row"><label for="gm-area">Shown to customers as</label></th>
+					<td><input class="regular-text" id="gm-area" name="gm_settings[delivery_area]" value="<?php echo esc_attr( $o['delivery_area'] ); ?>">
+					<p class="description">e.g. “We deliver up to 3 miles from Tividale Viewpoint B69”. Leave blank to show the postcode.</p></td></tr>
 				<tr><th scope="row"><label for="gm-free">Free delivery up to</label></th>
 					<td><input type="number" min="0" step="0.1" id="gm-free" name="gm_settings[free_miles]" value="<?php echo esc_attr( $o['free_miles'] ); ?>" style="width:6em"> miles</td></tr>
 				<tr><th scope="row"><label for="gm-mile">Then, per extra mile</label></th>
