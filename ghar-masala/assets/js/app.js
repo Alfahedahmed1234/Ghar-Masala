@@ -23,6 +23,7 @@
 		day: null,
 		slot: null, // { date, time, label }
 		order: null,
+		delivery: { status: 'idle' }, // idle | loading | ok | out | unknown | error
 		busy: false
 	};
 
@@ -183,8 +184,8 @@
 				'</div>';
 		}).join('') +
 			'<div class="gm-sum"><span class="gm-soft">Subtotal</span><span class="gm-tnum">' + money(sub) + '</span></div>' +
-			'<div class="gm-sum gm-sum--tight"><span class="gm-soft">Delivery within 2 miles of Tividale Viewpoint</span><span>Free</span></div>' +
-			'<div class="gm-sum gm-sum--total"><span>Total</span><span class="gm-tnum">' + money(sub) + '</span></div>';
+			'<div class="gm-sum gm-sum--tight"><span class="gm-soft">Delivery</span><span class="gm-soft">From your postcode at checkout</span></div>' +
+			'<p class="gm-small gm-muted" style="margin:4px 0 0">' + esc(C.deliveryRules) + '</p>';
 	}
 
 	/* ------------------------------------------------------------ slots */
@@ -283,10 +284,7 @@
 			return '<div class="gm-sumline"><span><span>' + state.cart[id] + ' × ' + esc(it.name) + '</span>' +
 				(note ? '<small>' + esc(note) + '</small>' : '') +
 				'</span><span class="gm-tnum">' + money(it.price * state.cart[id]) + '</span></div>';
-		}).join('') +
-			'<div class="gm-sum"><span class="gm-soft">Subtotal</span><span class="gm-tnum">' + money(sub) + '</span></div>' +
-			'<div class="gm-sum gm-sum--tight"><span class="gm-soft">Delivery</span><span>Free</span></div>' +
-			'<div class="gm-sum gm-sum--total"><span>Total</span><span class="gm-tnum">' + money(sub) + '</span></div>';
+		}).join('') + '<div data-gm-totals></div>';
 
 		// Pre-fill from the customer's last order when signed in.
 		var saved = C.user && C.user.saved;
@@ -297,12 +295,94 @@
 			});
 		}
 		$('[data-gm-error]').hidden = true;
+		var postcode = $('[data-gm-pay] [name="postcode"]');
+		if (postcode.value.trim()) checkDelivery(postcode.value);
+		else renderTotals();
+	}
+
+	/* ------------------------------------------------------------ delivery charge */
+
+	var deliveryTimer = null;
+	var deliveryFor = '';
+
+	function postcodeKey(v) { return String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
+
+	function checkDelivery(value) {
+		var key = postcodeKey(value);
+		clearTimeout(deliveryTimer);
+		if (!/^[A-Z]{1,2}[0-9][A-Z0-9]?[0-9][A-Z]{2}$/.test(key)) {
+			deliveryFor = '';
+			state.delivery = { status: 'idle' };
+			renderTotals();
+			return;
+		}
+		if (key === deliveryFor && state.delivery.status !== 'error') {
+			renderTotals();
+			return;
+		}
+		deliveryFor = key;
+		state.delivery = { status: 'loading' };
+		renderTotals();
+		deliveryTimer = setTimeout(function () {
+			fetch(C.rest + 'delivery?postcode=' + encodeURIComponent(key), { credentials: 'same-origin', cache: 'no-store' })
+				.then(function (r) { return r.json().then(function (body) { return { ok: r.ok, body: body }; }); })
+				.then(function (res) {
+					if (key !== deliveryFor) return; // the customer has typed something else since
+					var b = res.body;
+					if (res.ok) state.delivery = { status: b.ok ? 'ok' : 'out', fee: b.fee, miles: b.miles, message: b.message };
+					else state.delivery = { status: b.code === 'gm_postcode_unknown' ? 'unknown' : 'error', message: b.message };
+					renderTotals();
+				})
+				.catch(function () {
+					if (key !== deliveryFor) return;
+					state.delivery = { status: 'error' };
+					renderTotals();
+				});
+		}, 350);
+	}
+
+	function deliveryFee() {
+		return state.delivery.status === 'ok' ? state.delivery.fee : 0;
+	}
+
+	function renderTotals() {
+		var box = $('[data-gm-totals]');
+		if (!box) return;
+		var d = state.delivery;
+		var sub = subtotal();
+		var cell = {
+			idle: '<span class="gm-soft">Enter your postcode</span>',
+			loading: '<span class="gm-soft">Checking…</span>',
+			ok: d.fee ? money(d.fee) : 'Free',
+			out: '<span class="gm-warn">Outside our area</span>',
+			unknown: '<span class="gm-warn">Postcode not found</span>',
+			error: '<span class="gm-soft">Confirmed by the kitchen</span>'
+		}[d.status];
+		box.innerHTML =
+			'<div class="gm-sum"><span class="gm-soft">Subtotal</span><span class="gm-tnum">' + money(sub) + '</span></div>' +
+			'<div class="gm-sum gm-sum--tight"><span class="gm-soft">Delivery' + (d.status === 'ok' ? ' · ' + d.miles.toFixed(1) + ' miles' : '') + '</span><span class="gm-tnum">' + cell + '</span></div>' +
+			'<div class="gm-sum gm-sum--total"><span>Total</span><span class="gm-tnum">' + money(sub + deliveryFee()) + '</span></div>';
+
+		var msg = $('[data-gm-postcode-msg]');
+		var text = {
+			idle: C.deliveryRules,
+			loading: 'Working out your delivery charge…',
+			ok: d.message,
+			out: d.message,
+			unknown: d.message || 'We could not find that postcode — please check it.',
+			error: 'We could not check the distance just now. You can still order — the kitchen will confirm any delivery charge.'
+		}[d.status];
+		msg.textContent = text || '';
+		msg.className = 'gm-small ' + (d.status === 'out' || d.status === 'unknown' ? 'gm-warn' : 'gm-muted');
 		updatePayButton();
 	}
 
 	function updatePayButton() {
 		var card = payMethod() === 'card';
-		$('[data-gm-submit]').textContent = (card ? 'Pay ' : 'Place order · ') + money(subtotal());
+		var button = $('[data-gm-submit]');
+		var blocked = state.delivery.status === 'out' || state.delivery.status === 'unknown';
+		button.disabled = blocked || state.busy;
+		button.textContent = blocked ? 'Check your postcode' : (card ? 'Pay ' : 'Place order · ') + money(subtotal() + deliveryFee());
 		$('[data-gm-pay-note]').textContent = card
 			? 'You will be taken to Stripe’s secure page to pay — card details never touch this site. Your slot is held while you pay. Discount codes are checked when we confirm your order.'
 			: 'Pay when your food arrives, by cash or card. Discount codes are checked when we confirm your order.';
@@ -430,6 +510,7 @@
 			state.notes[id] = e.target.value;
 			save();
 		}
+		if (e.target.name === 'postcode' && e.target.closest('[data-gm-pay]')) checkDelivery(e.target.value);
 	});
 
 	document.addEventListener('change', function (e) {

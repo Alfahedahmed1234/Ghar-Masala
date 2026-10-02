@@ -12,6 +12,7 @@ define( 'GM_VERSION', '1.0.0' );
 require get_template_directory() . '/inc/data.php';
 require get_template_directory() . '/inc/settings.php';
 require get_template_directory() . '/inc/orders.php';
+require get_template_directory() . '/inc/delivery.php';
 require get_template_directory() . '/inc/stripe.php';
 require get_template_directory() . '/inc/rest.php';
 
@@ -73,6 +74,7 @@ add_action( 'wp_enqueue_scripts', function () {
 		'rest'      => esc_url_raw( rest_url( 'ghar-masala/v1/' ) ),
 		'loggedIn'  => is_user_logged_in(),
 		'minOrder'  => (int) round( gm_rules()['min_order'] * 100 ),
+		'deliveryRules' => gm_delivery_summary(),
 		'phone'     => array(
 			'href'  => 'tel:+' . gm_phone_intl(),
 			'label' => gm_setting( 'phone' ),

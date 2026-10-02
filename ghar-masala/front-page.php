@@ -40,7 +40,7 @@ $gm_signed_in = is_user_logged_in();
 			</div>
 			<div class="gm-hero__facts">
 				<div><p class="gm-hero__fact">15 min</p><p class="gm-hero__fact-label">Delivery window</p></div>
-				<div><p class="gm-hero__fact">£10</p><p class="gm-hero__fact-label">Minimum spend, free delivery</p></div>
+				<div><p class="gm-hero__fact">£10</p><p class="gm-hero__fact-label">Minimum spend</p></div>
 				<div><p class="gm-hero__fact">2 miles</p><p class="gm-hero__fact-label">Free radius from Tividale Viewpoint</p></div>
 			</div>
 		</div>
@@ -143,7 +143,7 @@ $gm_signed_in = is_user_logged_in();
 				'What makes you different?'                     => 'Fresh ingredients, cooked on the day of delivery — the pre-order method makes that possible. No base sauce, and nothing ultra-processed like others.',
 				'How do I place an order?'                      => 'Build your basket on the Menu page, then book a delivery slot — that takes you straight to checkout.',
 				'How far ahead can I order?'                    => 'Up to seven days ahead. Orders for a given evening must be placed by 7pm the day before.',
-				'Is there a minimum order?'                     => 'Yes, £10, which also covers free delivery within two miles of Tividale Viewpoint. Beyond that it is £1 per mile.',
+				'Is there a minimum order?'                     => 'Yes, £10. Delivery is ' . lcfirst( gm_delivery_summary() ) . ' Your charge is worked out from your postcode at checkout.',
 				'What are your delivery hours?'                 => 'Deliveries run 6–10pm, Sunday to Thursday. Each slot gives you a fifteen-minute delivery window.',
 				'Is the food halal?'                            => 'Yes — look for the حلال mark in the header on every page.',
 				'Can I choose how spicy my curry is?'           => 'Yes, tell us your spice level when you order. Madras and Vindaloo are 30p extra.',
@@ -236,7 +236,7 @@ $gm_signed_in = is_user_logged_in();
 				<div>
 					<p class="gm-step">01 — Basket</p>
 					<div data-gm-basket></div>
-					<p class="gm-small gm-muted" style="margin-top:18px">Minimum £10 spend for free delivery. Spice level and allergy notes are taken at checkout.</p>
+					<p class="gm-small gm-muted" style="margin-top:18px">Minimum £10 spend. Spice level and allergy notes are taken at checkout.</p>
 				</div>
 				<div>
 					<p class="gm-step">02 — Delivery slot</p>
@@ -265,7 +265,7 @@ $gm_signed_in = is_user_logged_in();
 				? 'Pay by card at checkout. Your slot is held while you pay, and confirmed on screen the moment payment clears.'
 				: 'Place your order at checkout and pay when the food arrives. Your slot is confirmed on screen straight away.';
 			$gm_steps    = array(
-				'Fill your basket'       => 'Choose your dishes and tell us the spice level you want. Orders of £10 or more are delivered free within two miles of Tividale Viewpoint.',
+				'Fill your basket'       => 'Choose your dishes and tell us the spice level you want. The minimum order is £10, and delivery is worked out from your postcode at checkout — ' . lcfirst( gm_delivery_summary() ),
 				'Book a delivery slot'   => 'Slots run every thirty minutes between 6pm and 10pm, Sunday to Thursday, and can be booked up to a week ahead. Orders close at 7pm the day before delivery.',
 				'Confirm your order'     => $gm_pay_copy,
 				'Cooked, then delivered' => 'Everything is cooked on the day of delivery, packed into insulated bags and driven to you inside your fifteen-minute window.',
@@ -287,14 +287,17 @@ $gm_signed_in = is_user_logged_in();
 				<h2 class="gm-subtitle">Delivery</h2>
 				<p class="gm-soft" style="max-width:46ch;margin:0 0 26px">We deliver ourselves, out of Tividale, from Sunday to Thursday between 6 and 10pm. Because every order is booked against a slot, your food is timed to land when you asked for it.</p>
 				<div class="gm-facts">
-					<div><span>Within 2 miles of Tividale Viewpoint, £10 or more</span><span>Free</span></div>
-					<div><span>Beyond 2 miles</span><span>£1 per mile</span></div>
+					<?php $gm_dr = gm_delivery_rules(); ?>
+					<div><span>Within <?php echo esc_html( gm_number( $gm_dr['free_miles'] ) ); ?> miles of <?php echo esc_html( $gm_dr['from'] ); ?></span><span>Free</span></div>
+					<div><span>Each extra mile</span><span><?php echo esc_html( gm_money( $gm_dr['per_mile'] ) ); ?></span></div>
+					<div><span>Furthest we deliver</span><span><?php echo esc_html( gm_number( $gm_dr['max_miles'] ) ); ?> miles</span></div>
+					<div><span>Minimum order</span><span>£10</span></div>
 					<div><span>Delivery days</span><span>Sunday to Thursday</span></div>
 					<div><span>Delivery window</span><span>15 minutes</span></div>
 					<div><span>Order deadline</span><span>7pm the day before</span></div>
 					<div><span>Payment</span><span><?php echo esc_html( gm_stripe_enabled() ? ( gm_cod_enabled() ? 'Card online or on delivery' : 'Card at checkout' ) : 'On delivery' ); ?></span></div>
 				</div>
-				<p class="gm-small gm-muted" style="margin-top:20px">Tividale, Oldbury and the surrounding area. If you are not sure whether we reach you, ring and ask — we usually can.</p>
+				<p class="gm-small gm-muted" style="margin-top:20px">Tividale, Oldbury and the surrounding area. Enter your postcode at checkout and the delivery charge is worked out for you.</p>
 				<a class="gm-btn" style="margin-top:30px" href="#menu">Build your order</a>
 			</div>
 			<figure class="gm-grayscale">
@@ -491,7 +494,7 @@ if ( $gm_signed_in ) :
 					<div class="field"><label for="gm-name">Name</label><input class="input" id="gm-name" name="name" type="text" autocomplete="name" placeholder="Your name" required value="<?php echo esc_attr( $gm_signed_in ? $gm_user->display_name : '' ); ?>"></div>
 					<div class="field"><label for="gm-email">Email</label><input class="input" id="gm-email" name="email" type="email" autocomplete="email" placeholder="For your confirmation" required value="<?php echo esc_attr( $gm_signed_in ? $gm_user->user_email : '' ); ?>"></div>
 					<div class="field"><label for="gm-addr">Address</label><input class="input" id="gm-addr" name="address" type="text" autocomplete="street-address" placeholder="House number and street" required></div>
-					<div class="field"><label for="gm-post">Postcode</label><input class="input" id="gm-post" name="postcode" type="text" autocomplete="postal-code" placeholder="B69" required></div>
+					<div class="field"><label for="gm-post">Postcode</label><input class="input" id="gm-post" name="postcode" type="text" autocomplete="postal-code" placeholder="B69 1NY" required><p class="gm-small gm-muted" data-gm-postcode-msg aria-live="polite" style="margin:6px 0 0"></p></div>
 					<div class="field"><label for="gm-phone">Mobile</label><input class="input" id="gm-phone" name="phone" type="tel" autocomplete="tel" placeholder="07…" required></div>
 					<div class="field"><label for="gm-notes">Spice level &amp; allergy notes</label><input class="input" id="gm-notes" name="instructions" type="text" placeholder="e.g. lamb curry madras, no dairy"></div>
 					<div class="field"><label for="gm-discount">Discount code (optional)</label><input class="input" id="gm-discount" name="discount" type="text" placeholder="Enter your code"></div>

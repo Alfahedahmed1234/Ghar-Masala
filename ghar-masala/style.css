@@ -198,6 +198,7 @@ section[id], div[id] { scroll-margin-top: 88px; }
 .radio input:focus-visible + .dot { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 
 .gm-error { margin: 18px 0 0; padding: 12px 14px; background: #fbe9e5; color: #8a1c0b; font-size: 14.5px; font-weight: 500; }
+.gm-warn { color: #8a1c0b; font-weight: 500; }
 .gm-notice { margin-top: clamp(24px, 3vw, 36px); padding: 14px 18px; background: var(--color-accent-2-100); color: var(--color-accent-2-900); font-weight: 500; }
 
 /* ============================================================== Halal mark */

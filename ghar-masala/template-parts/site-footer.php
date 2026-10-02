@@ -56,7 +56,7 @@ $gm_email = gm_setting( 'email' );
 	</div>
 	<div class="gm-footer__legal">
 		<span>Ghar Masala Ltd — company no. 16189818</span>
-		<span>Tividale, Oldbury B69 · free delivery within 2 miles of Tividale Viewpoint</span>
+		<span>Tividale, Oldbury B69 · <?php echo esc_html( lcfirst( rtrim( gm_delivery_summary(), '.' ) ) ); ?></span>
 		<span>All dishes are prepared where allergens are present, so traces cannot be guaranteed.</span>
 	</div>
 </footer>

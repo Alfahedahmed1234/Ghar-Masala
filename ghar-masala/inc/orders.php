@@ -185,6 +185,9 @@ function gm_order_summary( $id ) {
 	$date = get_post_meta( $id, '_gm_slot_date', true );
 	$time = get_post_meta( $id, '_gm_slot_time', true );
 	$day  = DateTimeImmutable::createFromFormat( '!Y-m-d', $date, gm_tz() );
+	$total    = (int) get_post_meta( $id, '_gm_total', true );
+	$subtotal = get_post_meta( $id, '_gm_subtotal', true );
+	$subtotal = '' === $subtotal ? $total : (int) $subtotal;
 	return array(
 		'ref'      => gm_order_ref( $id ),
 		'status'   => get_post_meta( $id, '_gm_status', true ),
@@ -193,10 +196,22 @@ function gm_order_summary( $id ) {
 		'date'     => $day ? $day->format( 'D j F' ) : $date,
 		'window'   => gm_slot_window( $time ),
 		'lines'    => $lines,
-		'total'       => gm_money( (int) get_post_meta( $id, '_gm_total', true ) ),
-		'total_pence' => (int) get_post_meta( $id, '_gm_total', true ),
-		'discount' => get_post_meta( $id, '_gm_discount', true ),
+		'subtotal'    => gm_money( $subtotal ),
+		'delivery'    => gm_delivery_label( $id ),
+		'total'       => gm_money( $total ),
+		'total_pence' => $total,
+		'discount'    => get_post_meta( $id, '_gm_discount', true ),
 	);
+}
+
+/** "£1.00 (2.4 miles)", "Free (1.2 miles)", or a warning when unchecked. */
+function gm_delivery_label( $id ) {
+	$fee   = (int) get_post_meta( $id, '_gm_delivery', true );
+	$miles = get_post_meta( $id, '_gm_miles', true );
+	if ( '' === $miles ) {
+		return metadata_exists( 'post', $id, '_gm_delivery' ) ? 'Not checked — postcode lookup was down' : 'Free';
+	}
+	return ( $fee ? gm_money( $fee ) : 'Free' ) . ' (' . number_format( (float) $miles, 1 ) . ' miles)';
 }
 
 /**
@@ -267,6 +282,21 @@ function gm_create_order( array $data ) {
 		return new WP_Error( 'gm_field_email', 'Please enter a valid email address.' );
 	}
 
+	// Delivery charge. If postcodes.io is down the order still goes through,
+	// flagged so the kitchen checks the distance itself.
+	$delivery = gm_delivery_quote( $customer['postcode'] );
+	if ( is_wp_error( $delivery ) && 'gm_postcode_unknown' === $delivery->get_error_code() ) {
+		return new WP_Error( 'gm_field_postcode', $delivery->get_error_message() );
+	}
+	if ( ! is_wp_error( $delivery ) && ! $delivery['ok'] ) {
+		return new WP_Error( 'gm_out_of_area', $delivery['message'] );
+	}
+	$checked = ! is_wp_error( $delivery );
+	$fee     = $checked ? $delivery['fee'] : 0;
+	if ( $checked ) {
+		$customer['postcode'] = $delivery['postcode'];
+	}
+
 	$payment = ( 'card' === ( $data['payment'] ?? '' ) && gm_stripe_enabled() ) ? 'card' : 'cod';
 	if ( 'cod' === $payment && ! gm_cod_enabled() ) {
 		return new WP_Error( 'gm_payment', 'Please pay by card.' );
@@ -290,7 +320,10 @@ function gm_create_order( array $data ) {
 		'_gm_slot_date' => $date,
 		'_gm_slot_time' => $time,
 		'_gm_items'     => $items,
-		'_gm_total'     => $total,
+		'_gm_subtotal'  => $total,
+		'_gm_delivery'  => $fee,
+		'_gm_miles'     => $checked ? $delivery['miles'] : '',
+		'_gm_total'     => $total + $fee,
 		'_gm_user'      => get_current_user_id(),
 		'_gm_created'   => time(),
 	);
@@ -385,7 +418,7 @@ function gm_send_order_emails( $id ) {
 		}
 	}
 
-	$details = "Order {$o['ref']}\nDelivery: {$o['slot']}\n\n{$lines}\nTotal: {$o['total']} ({$paid})\n";
+	$details = "Order {$o['ref']}\nDelivery: {$o['slot']}\n\n{$lines}\nSubtotal: {$o['subtotal']}\nDelivery charge: {$o['delivery']}\nTotal: {$o['total']} ({$paid})\n";
 	if ( $o['discount'] ) {
 		$details .= "Discount code entered: {$o['discount']}\n";
 	}
@@ -471,6 +504,7 @@ function gm_render_order_box( $post ) {
 		<?php foreach ( $o['lines'] as $line ) : ?>
 			<tr><td><?php echo esc_html( $line['name'] ); ?></td><td><?php echo (int) $line['qty']; ?></td><td><?php echo esc_html( $line['note'] ); ?></td><td style="text-align:right"><?php echo esc_html( $line['total'] ); ?></td></tr>
 		<?php endforeach; ?>
+		<tr><td colspan="3">Delivery</td><td style="text-align:right"><?php echo esc_html( $o['delivery'] ); ?></td></tr>
 		<tr><th colspan="3">Total</th><th style="text-align:right"><?php echo esc_html( $o['total'] ); ?></th></tr>
 		</tbody>
 	</table>

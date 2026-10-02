@@ -52,6 +52,18 @@ function gm_stripe_checkout_url( $id ) {
 		);
 	}
 
+	$fee = (int) get_post_meta( $id, '_gm_delivery', true );
+	if ( $fee > 0 ) {
+		$line_items[] = array(
+			'quantity'   => 1,
+			'price_data' => array(
+				'currency'     => 'gbp',
+				'unit_amount'  => $fee,
+				'product_data' => array( 'name' => 'Delivery — ' . gm_delivery_label( $id ) ),
+			),
+		);
+	}
+
 	$base    = home_url( '/' );
 	$session = gm_stripe_request(
 		'POST',

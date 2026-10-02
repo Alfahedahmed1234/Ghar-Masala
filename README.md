@@ -7,6 +7,7 @@ The site keeps the design's single-page feel. Home, Menu, How it works, My story
 Unlike the design prototype, this version takes real orders:
 
 - **Basket and delivery slots.** The £10 minimum is enforced. Slots run 6–10pm, Sunday to Thursday. Orders close at 7pm the day before. A slot that has been booked closes for everyone, and the server checks this as well as the page.
+- **Delivery charge from the postcode.** As soon as a customer types their postcode at checkout, the site works out how far it is from B69 1NY. Up to 2 miles is free, then it's £1 for each extra mile started (2.4 miles = £1). Postcodes more than 3 miles away can't check out. The charge is worked out again on the server when the order is placed, so the page can't be tricked into skipping it. You can change all of these numbers in **Settings → Ghar Masala → Delivery charge**.
 - **Checkout.** Customers can pay on delivery, or pay by card through Stripe if you add your Stripe keys. Card numbers are typed on Stripe's own page and never reach your website.
 - **Orders in WordPress.** Each order shows up under **Orders** in the dashboard. An email goes to the kitchen and another to the customer.
 - **Customer accounts.** Customers see their order history, can reorder with one tap, and get their address filled in at checkout.
@@ -20,7 +21,8 @@ Unlike the design prototype, this version takes real orders:
 5. Go to **Settings → Ghar Masala** and check:
    - the kitchen phone number and public email
    - **Send new orders to:** the inbox that should receive order emails
-   - **Card payments:** see below. If you leave the Stripe fields empty, every order is "pay on delivery".
+   - **Delivery charge:** kitchen postcode (B69 1NY), free radius (2 miles), price per extra mile (£1) and the furthest you deliver (3 miles).
+   - **Card payments:** see below. The **Pay by card** option only appears once your Stripe key is in, and the dashboard reminds you until it is.
 6. Optional: to let customers create accounts, go to **Settings → General** and tick **Anyone can register** with the role **Subscriber**.
 7. **Emails:** Hostinger's default PHP mail often lands in spam. Create a mailbox in hPanel (for example orders@yourdomain), then install the free **WP Mail SMTP** plugin and connect it to that mailbox.
 8. **Caching:** if you use **LiteSpeed Cache**, the theme already tells it not to cache live slot data or checkout pages. After you change the menu, purge the cache with **LiteSpeed Cache → Purge All**.
@@ -73,3 +75,9 @@ Testimonials are still the placeholders from the design. Replace them in `front-
 ```sh
 ./build.sh   # writes dist/ghar-masala.zip
 ```
+
+## How the delivery distance is measured
+
+Distances are measured in a straight line ("as the crow flies") between postcodes. The site looks postcodes up on [postcodes.io](https://postcodes.io), a free service that runs on Royal Mail / Ordnance Survey data and needs no account. Road distances are usually a bit longer than straight-line ones. If you'd rather charge by road distance, that needs a paid Google Maps key.
+
+If postcodes.io is ever down, customers can still order. In that case the order is marked "Delivery: Not checked" in the email and the dashboard, so you can confirm the charge yourself.
