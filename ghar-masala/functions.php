@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'GM_VERSION', '1.4.0' );
+define( 'GM_VERSION', '1.5.0' );
 
 /** Cache-busting version: changes whenever the file does. */
 function gm_ver( $file ) {
@@ -152,3 +152,13 @@ add_filter( 'login_redirect', function ( $redirect_to, $requested, $user ) {
 add_filter( 'show_admin_bar', function ( $show ) {
 	return current_user_can( 'edit_posts' ) ? $show : false;
 } );
+
+/** The allergen disclaimer used under the menu and in the footer (HTML). */
+function gm_allergen_note() {
+	return sprintf(
+		'Due to the nature of our operations, we cannot guarantee that our dishes are completely free from traces of allergens. Please visit our <a href="%1$s">Allergens page</a> for further information, or contact us on <a href="%2$s">%3$s</a> if you have any questions or specific allergen requirements.',
+		esc_url( gm_view_url( 'allergens' ) ),
+		esc_attr( 'tel:+' . gm_phone_intl() ),
+		esc_html( gm_setting( 'phone' ) )
+	);
+}

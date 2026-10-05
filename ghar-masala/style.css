@@ -3,7 +3,7 @@ Theme Name: Ghar Masala
 Theme URI: https://www.facebook.com/gharmasala
 Author: Ghar Masala Ltd
 Description: Pre-order home-style curry delivery for Tividale & Oldbury — menu, basket, bookable 15-minute delivery slots, checkout (pay on delivery or Stripe card payments), allergen table and customer accounts.
-Version: 1.4.0
+Version: 1.5.0
 Requires at least: 6.0
 Requires PHP: 7.4
 License: GNU General Public License v2 or later
@@ -294,16 +294,24 @@ section[id], div[id] { scroll-margin-top: 88px; }
 
 /* =================================================================== Footer */
 
-.gm-footer { max-width: 1240px; margin: 0 auto; padding: clamp(26px, 3vw, 40px) var(--gutter) 0; }
-.gm-footer__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 26px clamp(22px, 3vw, 44px); align-items: start; }
-.gm-footer__list { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; font-size: 14.5px; line-height: 23px; }
-.gm-footer__list a:not(.gm-ulink) { font-weight: 500; text-decoration: none; }
-.gm-social { display: flex; flex-wrap: wrap; gap: 8px; }
-.gm-social a { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; background: var(--color-accent); color: var(--color-bg); }
+.gm-footer { max-width: 1240px; margin: 0 auto; padding: 22px var(--gutter) 0; border-top: 1px solid var(--color-divider); font-size: 13px; line-height: 1.5; }
+.gm-footer__grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px clamp(16px, 3vw, 40px); align-items: start; }
+.gm-footer__head { font-size: 10.5px; letter-spacing: 0.09em; text-transform: uppercase; font-weight: 600; margin: 0 0 6px; color: var(--ink-55); }
+.gm-footer__list { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.gm-footer__list a { color: var(--color-text); text-decoration: none; }
+.gm-footer__list a:hover { color: var(--color-accent); text-decoration: underline; }
+.gm-social { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.gm-social a { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: var(--color-accent); color: var(--color-bg); }
+.gm-social a svg { width: 15px; height: 15px; }
 .gm-social a:hover { background: var(--color-accent-600); color: var(--color-bg); }
-.gm-footer__legal {
-	border-top: 1px solid var(--color-divider); margin-top: clamp(22px, 2.6vw, 32px); padding: 14px 0 22px;
-	display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; font-size: 12.5px; color: var(--ink-55);
+.gm-footer__legal { border-top: 1px solid var(--color-divider); margin-top: 18px; padding: 12px 0 16px; font-size: 11.5px; line-height: 1.55; color: var(--ink-55); }
+.gm-footer__legal p { margin: 0 0 4px; }
+.gm-footer__legal p:last-child { margin-bottom: 0; }
+.gm-allergen-note a { color: var(--color-accent); font-weight: 600; white-space: nowrap; }
+@media (max-width: 700px) {
+	.gm-footer { padding-top: 18px; font-size: 12.5px; }
+	.gm-footer__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
+	.gm-footer__legal { margin-top: 14px; font-size: 11px; }
 }
 
 /* ==================================================================== Story */
@@ -390,7 +398,7 @@ section[id], div[id] { scroll-margin-top: 88px; }
 .gm-dish__price { font-size: 15.5px; font-weight: 500; padding-top: 1px; }
 .gm-dish__qty { min-width: 22px; text-align: right; font-size: 13px; font-weight: 600; color: var(--color-accent); padding-top: 3px; }
 .gm-menu__foot { padding-top: 22px; padding-bottom: 30px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; font-size: 13px; }
-.gm-menu__foot .gm-ulink { font-size: 13px; }
+.gm-menu__foot .gm-allergen-note { margin: 0; max-width: 90ch; font-size: 13px; line-height: 21px; color: var(--ink-62); }
 
 /* =================================================================== Order */
 

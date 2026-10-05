@@ -254,8 +254,7 @@ $gm_signed_in = is_user_logged_in();
 	</div>
 
 	<div class="gm-wrap gm-menu__foot">
-		<a class="gm-ulink" href="#allergens">Allergen information</a>
-		<span class="gm-muted">All dishes are prepared where allergens are present, so traces cannot be guaranteed.</span>
+		<p class="gm-allergen-note"><?php echo gm_allergen_note(); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped in gm_allergen_note(). ?></p>
 	</div>
 </section>
 
