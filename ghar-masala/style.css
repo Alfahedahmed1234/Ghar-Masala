@@ -3,7 +3,7 @@ Theme Name: Ghar Masala
 Theme URI: https://www.facebook.com/gharmasala
 Author: Ghar Masala Ltd
 Description: Pre-order home-style curry delivery for Tividale & Oldbury — menu, basket, bookable 15-minute delivery slots, checkout (pay on delivery or Stripe card payments), allergen table and customer accounts.
-Version: 1.7.0
+Version: 1.8.0
 Requires at least: 6.0
 Requires PHP: 7.4
 License: GNU General Public License v2 or later
@@ -458,31 +458,67 @@ button.gm-slot:hover { border-color: var(--color-accent); background: var(--colo
 
 /* =============================================================== Allergens */
 
-.gm-legend { display: flex; flex-wrap: wrap; gap: 14px 30px; margin: 28px 0 0; padding: 16px 0; border-top: 1px solid var(--color-divider); border-bottom: 1px solid var(--color-divider); font-size: 14.5px; }
-.gm-legend > span { display: flex; align-items: center; gap: 10px; }
-.gm-mark { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 21px; height: 21px; font-weight: 600; font-size: 11px; }
+/* Key: a highlighted box so Y / P are impossible to miss. */
+.gm-legend { margin: 26px 0 0; padding: 16px 18px; background: var(--color-accent-2-100); border: 1px solid var(--color-accent-2-300, #f6ca79); border-left: 5px solid var(--color-accent-2-500); }
+.gm-legend__title { margin: 0 0 10px; font-size: 12px; letter-spacing: 0.09em; text-transform: uppercase; font-weight: 700; color: var(--color-accent-2-800); }
+.gm-legend__items { display: flex; flex-wrap: wrap; gap: 10px 28px; font-size: 15px; color: var(--color-accent-2-900); }
+.gm-legend__items > span { display: flex; align-items: center; gap: 10px; }
+.gm-legend__items strong { font-weight: 700; }
+.gm-mark { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; font-weight: 700; font-size: 12px; }
 .gm-mark--y { background: var(--color-accent); color: var(--color-bg); }
-.gm-mark--p { border: 1px solid var(--color-accent-2-600); color: var(--color-accent-2-700); }
+.gm-mark--p { background: var(--color-accent-2-200, #fae1b8); border: 1.5px solid var(--color-accent-2-600); color: var(--color-accent-2-800); }
+.gm-mark--key-none { color: var(--color-neutral-500); background: var(--color-bg); border: 1px solid var(--color-neutral-300); }
 .gm-mark--none { display: inline-block; width: 8px; height: 1px; background: var(--color-neutral-400); vertical-align: middle; }
 
-.gm-allergens { margin-top: 26px; border: 1px solid var(--color-divider); overflow-x: auto; background: var(--color-bg); }
-.gm-allergens table { border-collapse: collapse; min-width: 1400px; width: 100%; }
+.gm-allergens__hint { margin: 18px 0 8px; font-size: 13.5px; color: var(--ink-62); }
+.gm-allergens__hint-phone { display: none; }
+
+/* The table scrolls inside its own box, so the header row (allergens) and the
+   first column (dishes) can stay frozen in place. */
+.gm-allergens { position: relative; max-height: min(78vh, 900px); overflow: auto; border: 1px solid var(--color-divider); background: var(--color-bg); overscroll-behavior: contain; }
+.gm-allergens:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.gm-allergens table { border-collapse: separate; border-spacing: 0; min-width: 1100px; width: 100%; }
 .gm-allergens thead th {
-	background: #006a4e; color: var(--color-bg); padding: 13px 7px; font-size: 10.5px; line-height: 1.3; letter-spacing: 0.02em;
+	position: sticky; top: 0; z-index: 3;
+	background: #006a4e; color: var(--color-bg); padding: 12px 6px; font-size: 10.5px; line-height: 1.3; letter-spacing: 0.02em;
 	text-transform: uppercase; font-weight: 600; text-align: center; vertical-align: bottom; white-space: nowrap;
 	border-left: 1px solid color-mix(in srgb, var(--cream) 24%, transparent);
 }
-.gm-allergens thead th:first-child { position: sticky; left: 0; z-index: 2; text-align: left; padding: 13px 14px; font-size: 11.5px; letter-spacing: 0.08em; border-left: 0; width: 250px; }
+.gm-allergens thead th.gm-allergens__corner { left: 0; z-index: 5; text-align: left; padding: 10px 12px; width: 230px; border-left: 0; vertical-align: bottom; }
+.gm-allergens__corner > span { display: block; font-size: 11.5px; letter-spacing: 0.08em; }
+.gm-allergens__corner small { display: block; margin-top: 6px; font-size: 10px; line-height: 1.9; letter-spacing: 0; text-transform: none; font-weight: 500; color: color-mix(in srgb, var(--cream) 85%, transparent); }
+.gm-allergens__corner small .gm-mark { width: 16px; height: 16px; font-size: 9.5px; margin-right: 4px; vertical-align: middle; }
+.gm-allergens__corner small .gm-mark--y { background: var(--cream); color: #006a4e; }
 .gm-allergens tbody th[scope="row"] {
-	position: sticky; left: 0; z-index: 1; background: var(--color-bg); padding: 12px 14px; text-align: left;
-	font-size: 14.5px; font-weight: 500; border-right: 1px solid var(--color-neutral-300); white-space: nowrap;
+	position: sticky; left: 0; z-index: 2; background: var(--color-bg); padding: 10px 12px; text-align: left;
+	font-size: 14.5px; font-weight: 500; border-right: 1px solid var(--color-neutral-300); border-bottom: 1px solid var(--ink-7);
 }
-.gm-allergens td { height: 44px; text-align: center; border-left: 1px solid color-mix(in srgb, var(--color-text) 5%, transparent); border-bottom: 1px solid var(--ink-7); }
-.gm-allergens tbody th[scope="row"] { border-bottom: 1px solid var(--ink-7); }
+.gm-allergens td { height: 44px; text-align: center; border-left: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent); border-bottom: 1px solid var(--ink-7); }
+.gm-allergens td.is-y { background: color-mix(in srgb, var(--color-accent) 8%, transparent); }
+.gm-allergens td.is-p { background: color-mix(in srgb, var(--color-accent-2-500) 10%, transparent); }
+.gm-allergens tbody tr:hover th[scope="row"], .gm-allergens tbody tr:hover td { background-color: var(--color-accent-100); }
 .gm-allergens__group th {
-	position: sticky; left: 0; background: var(--color-surface); border-top: 1px solid var(--color-divider); border-bottom: 1px solid var(--color-neutral-300);
-	padding: 9px 14px; font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase; font-weight: 600; text-align: left; color: var(--ink-62);
+	background: var(--color-surface); border-top: 1px solid var(--color-divider); border-bottom: 1px solid var(--color-neutral-300);
+	padding: 8px 12px; font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase; font-weight: 700; text-align: left; color: var(--ink-62);
 }
+.gm-allergens__group th > span { position: sticky; left: 12px; } /* section name stays in view when scrolled sideways */
+
+@media (max-width: 700px) {
+	.gm-legend { padding: 14px; }
+	.gm-legend__items { flex-direction: column; gap: 8px; font-size: 14.5px; }
+	.gm-allergens__hint-phone { display: inline; }
+	.gm-allergens__hint-desk { display: none; }
+	.gm-allergens { max-height: calc(100svh - 150px); margin-left: calc(var(--gutter) * -1); margin-right: calc(var(--gutter) * -1); border-left: 0; border-right: 0; }
+	.gm-allergens table { min-width: 0; width: max-content; }
+	/* Allergen names run upwards so each column is only as wide as a mark. */
+	.gm-allergens thead th:not(.gm-allergens__corner) { width: 34px; min-width: 34px; max-width: 34px; height: 104px; padding: 8px 0; }
+	.gm-allergens thead th:not(.gm-allergens__corner) > span { display: inline-block; writing-mode: vertical-rl; transform: rotate(180deg); font-size: 10.5px; letter-spacing: 0.04em; }
+	.gm-allergens thead th.gm-allergens__corner { width: 118px; min-width: 118px; max-width: 118px; padding: 8px 10px; }
+	.gm-allergens tbody th[scope="row"] { width: 118px; min-width: 118px; max-width: 118px; padding: 8px 10px; font-size: 13px; line-height: 1.3; white-space: normal; box-shadow: 4px 0 6px -4px color-mix(in srgb, #00241b 25%, transparent); }
+	.gm-allergens td { height: 42px; padding: 0; }
+	.gm-allergens .gm-mark { width: 22px; height: 22px; font-size: 11px; }
+}
+
 .gm-notice-block { border-top: 1px solid var(--color-divider); margin-top: 36px; padding-top: 22px; max-width: 70ch; }
 .gm-notice-block p { font-size: 15.5px; line-height: 26px; margin: 0; }
 
@@ -727,15 +763,15 @@ textarea.input { min-height: 110px; resize: vertical; font-family: inherit; }
 	.input, select.input, textarea.input { font-size: 16px; } /* stops iPhones zooming in on fields */
 	.gm-slimbar__inner { gap: 8px 16px; }
 	.gm-slimbar img { height: 38px; }
-	.gm-allergens table { min-width: 1100px; }
-	.gm-allergens tbody th[scope="row"] { white-space: normal; min-width: 150px; font-size: 13.5px; }
 }
 
 /* ================================================================== Print */
 
 @media print {
 	.gm-topbar, .gm-footer, .gm-cta-row, .gm-view:not([data-view="allergens"]) { display: none !important; }
-	.gm-allergens { overflow: visible; border: 0; }
+	.gm-allergens { overflow: visible; max-height: none; border: 0; }
+	.gm-allergens thead th, .gm-allergens tbody th[scope="row"] { position: static; }
+	.gm-legend, .gm-allergens__hint { break-inside: avoid; }
 	.gm-allergens table { min-width: 0; font-size: 9px; }
 	.gm-allergens thead th { padding: 6px 3px; font-size: 8px; color: #000; background: #fff; border: 1px solid #999; }
 	.gm-mark--y { background: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }

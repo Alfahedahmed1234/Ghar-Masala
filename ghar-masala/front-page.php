@@ -369,28 +369,33 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 	<div class="gm-wrap gm-page">
 		<h1 class="gm-title" style="max-width:22ch">Allergen information</h1>
 		<p class="gm-lede">The table lists the fourteen declarable allergens against every dish on our menu. If anything is unclear, add a note at checkout or ring the kitchen on <a href="<?php echo esc_attr( $gm_tel ); ?>"><?php echo esc_html( $gm_phone ); ?></a> before you order.</p>
-		<div class="gm-legend">
-			<span><span class="gm-mark gm-mark--y">Y</span>Contains this allergen</span>
-			<span><span class="gm-mark gm-mark--p">P</span>May contain traces</span>
+		<div class="gm-legend" role="note" aria-label="How to read the allergen table">
+			<p class="gm-legend__title">How to read the table</p>
+			<div class="gm-legend__items">
+				<span><span class="gm-mark gm-mark--y">Y</span><span><strong>Yes</strong> — contains this allergen</span></span>
+				<span><span class="gm-mark gm-mark--p">P</span><span><strong>Possible</strong> — may contain traces</span></span>
+				<span><span class="gm-mark gm-mark--key-none">–</span><span><strong>No</strong> — not used in this dish</span></span>
+			</div>
 		</div>
-		<div class="gm-allergens">
+		<p class="gm-allergens__hint"><span class="gm-allergens__hint-phone">Swipe the table up, down and sideways — the allergen names and dishes stay in place.</span><span class="gm-allergens__hint-desk">Scroll inside the table — the allergen names stay at the top.</span></p>
+		<div class="gm-allergens" tabindex="0" aria-label="Allergen table, scrollable">
 			<table>
 				<thead>
 					<tr>
-						<th scope="col">Dish</th>
-						<?php foreach ( gm_allergen_cols() as $label ) : ?><th scope="col"><?php echo esc_html( $label ); ?></th><?php endforeach; ?>
+						<th scope="col" class="gm-allergens__corner"><span>Dish</span><small><b class="gm-mark gm-mark--y">Y</b> contains<br><b class="gm-mark gm-mark--p">P</b> may contain</small></th>
+						<?php foreach ( gm_allergen_cols() as $label ) : ?><th scope="col"><span><?php echo esc_html( $label ); ?></span></th><?php endforeach; ?>
 					</tr>
 				</thead>
 				<?php foreach ( gm_allergen_table() as $group ) : ?>
 					<tbody>
-						<tr class="gm-allergens__group"><th colspan="<?php echo count( gm_allergen_cols() ) + 1; ?>" scope="rowgroup"><?php echo esc_html( $group['title'] ); ?></th></tr>
+						<tr class="gm-allergens__group"><th colspan="<?php echo count( gm_allergen_cols() ) + 1; ?>" scope="rowgroup"><span><?php echo esc_html( $group['title'] ); ?></span></th></tr>
 						<?php foreach ( $group['rows'] as $row ) : ?>
 							<tr>
 								<th scope="row"><?php echo esc_html( $row['name'] ); ?></th>
 								<?php foreach ( array_keys( gm_allergen_cols() ) as $key ) : ?>
-									<td>
+									<?php $mark = $row['marks'][ $key ] ?? ''; ?>
+									<td class="<?php echo $mark ? 'is-' . esc_attr( strtolower( $mark ) ) : ''; ?>">
 										<?php
-										$mark = $row['marks'][ $key ] ?? '';
 										if ( 'Y' === $mark ) {
 											echo '<span class="gm-mark gm-mark--y" title="Contains">Y</span>';
 										} elseif ( 'P' === $mark ) {
@@ -407,7 +412,6 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 				<?php endforeach; ?>
 			</table>
 		</div>
-		<p class="gm-small gm-muted" style="margin-top:14px">Scroll the table sideways to see every allergen. A dash means the allergen is not used in that dish.</p>
 		<div class="gm-cta-row gm-cta-row--plain">
 			<button type="button" class="gm-btn-outline gm-btn-outline--lg" onclick="window.print()">Print this table</button>
 			<a class="gm-btn" href="#menu">Back to the menu</a>
