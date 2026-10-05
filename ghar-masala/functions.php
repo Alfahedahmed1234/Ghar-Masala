@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'GM_VERSION', '1.1.0' );
+define( 'GM_VERSION', '1.2.0' );
 
 /** Cache-busting version: changes whenever the file does. */
 function gm_ver( $file ) {
@@ -78,7 +78,10 @@ add_action( 'wp_enqueue_scripts', function () {
 
 	$user   = wp_get_current_user();
 	$config = array(
-		'rest'      => esc_url_raw( rest_url( 'ghar-masala/v1/' ) ),
+		// Paths only (no https://domain), so requests always go to the address the
+		// visitor is on — a redirect (http→https, www) would turn a POST into a GET.
+		'rest'      => wp_make_link_relative( esc_url_raw( rest_url( 'ghar-masala/v1/' ) ) ),
+		'ajax'      => wp_make_link_relative( admin_url( 'admin-ajax.php' ) ),
 		'loggedIn'  => is_user_logged_in(),
 		'minOrder'  => (int) round( gm_rules()['min_order'] * 100 ),
 		'deliveryRules' => gm_delivery_summary(),

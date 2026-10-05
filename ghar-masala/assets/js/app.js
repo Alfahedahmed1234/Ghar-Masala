@@ -15,6 +15,8 @@
 		g.items.forEach(function (it) { items[it.id] = it; });
 	});
 
+	var resetLink = null; // { key, login } from a password-reset email
+
 	var state = {
 		view: 'home',
 		cart: {},
@@ -39,6 +41,13 @@
 	}
 
 	function money(p) { return '£' + (p / 100).toFixed(2); }
+
+	/** REST URL that works with pretty (/wp-json/…) and plain (?rest_route=…) permalinks. */
+	function rest(path, query) {
+		var url = C.rest + path;
+		if (query) url += (url.indexOf('?') === -1 ? '?' : '&') + query;
+		return url;
+	}
 
 	function save() {
 		try { localStorage.setItem(STORE_KEY, JSON.stringify({ cart: state.cart, notes: state.notes })); } catch (e) { /* private mode */ }
@@ -98,8 +107,10 @@
 			view = hash === 'order' ? 'menu' : 'how';
 		}
 		if (!view || view === 'top') view = 'home';
-		var authMode = view === 'register' ? 'register' : 'login';
-		if (view === 'register') view = 'login';
+		var AUTH_MODES = ['register', 'forgot', 'reset'];
+		var authMode = AUTH_MODES.indexOf(view) !== -1 ? view : 'login';
+		if (authMode === 'reset' && !resetLink) authMode = 'forgot';
+		if (AUTH_MODES.indexOf(view) !== -1) view = 'login';
 		if (view === 'account' && !C.loggedIn) view = 'login';
 		if (view === 'login' && C.loggedIn) view = 'account';
 		if (VIEWS.indexOf(view) === -1) return; // an ordinary in-page anchor
@@ -109,7 +120,7 @@
 		show(view);
 		if (view === 'login') {
 			$$('[data-gm-auth]').forEach(function (el) { el.hidden = el.getAttribute('data-gm-auth') !== authMode; });
-			$$('[data-gm-auth-error]').forEach(function (el) { el.hidden = true; });
+			$$('[data-gm-auth-error],[data-gm-auth-ok]').forEach(function (el) { el.hidden = true; });
 		}
 		if (scrollTo) {
 			var target = document.getElementById(scrollTo);
@@ -201,7 +212,7 @@
 	function loadSlots(force) {
 		if (!force && state.days && Date.now() - slotsLoadedAt < 60000) return;
 		slotsLoadedAt = Date.now();
-		fetch(C.rest + 'slots?_=' + Date.now(), { credentials: 'same-origin', cache: 'no-store' })
+		fetch(rest('slots', '_=' + Date.now()), { credentials: 'same-origin', cache: 'no-store' })
 			.then(function (r) { return r.json(); })
 			.then(function (data) {
 				state.days = data.days || [];
@@ -330,7 +341,7 @@
 		state.delivery = { status: 'loading' };
 		renderTotals();
 		deliveryTimer = setTimeout(function () {
-			fetch(C.rest + 'delivery?postcode=' + encodeURIComponent(key), { credentials: 'same-origin', cache: 'no-store' })
+			fetch(rest('delivery', 'postcode=' + encodeURIComponent(key)), { credentials: 'same-origin', cache: 'no-store' })
 				.then(function (r) { return r.json().then(function (body) { return { ok: r.ok, body: body }; }); })
 				.then(function (res) {
 					if (key !== deliveryFor) return; // the customer has typed something else since
@@ -421,7 +432,7 @@
 		button.textContent = 'Placing your order…';
 		errorBox.hidden = true;
 
-		fetch(C.rest + 'orders', { method: 'POST', credentials: 'same-origin', headers: headers, body: JSON.stringify(payload) })
+		fetch(rest('orders'), { method: 'POST', credentials: 'same-origin', headers: headers, body: JSON.stringify(payload) })
 			.then(function (r) { return r.json().then(function (body) { return { ok: r.ok, body: body }; }); })
 			.then(function (res) {
 				if (!res.ok) throw res.body;
@@ -525,40 +536,65 @@
 
 	/* ------------------------------------------------------------ sign in / create account */
 
-	function authSubmit(form, endpoint, fields, busyLabel) {
+	/** POST to admin-ajax.php; resolves with `data`, rejects with { message }. */
+	function ajax(action, fields) {
+		var body = new URLSearchParams();
+		body.append('action', action);
+		Object.keys(fields || {}).forEach(function (k) { body.append(k, fields[k]); });
+		return fetch(C.ajax, { method: 'POST', credentials: 'same-origin', body: body })
+			.then(function (r) { return r.json().catch(function () { return {}; }); })
+			.then(function (res) {
+				if (!res.success) throw (res.data && res.data.message ? res.data : { message: 'Something went wrong — please try again.' });
+				return res.data || {};
+			});
+	}
+
+	/** Reload so the page is rebuilt for the signed-in customer. */
+	function openAccount() {
+		history.replaceState(null, '', location.pathname + '#account');
+		location.reload();
+	}
+
+	function authForm(form, action, busyLabel, done) {
+		if (!form) return;
 		form.addEventListener('submit', function (e) {
 			e.preventDefault();
 			var errorBox = $('[data-gm-auth-error]', form);
+			var okBox = $('[data-gm-auth-ok]', form);
 			var button = $('button[type="submit"]', form);
 			var missing = $$('input[required]', form).filter(function (i) { return !i.value.trim() || !i.checkValidity(); })[0];
+			if (okBox) okBox.hidden = true;
 			if (missing) {
 				errorBox.textContent = missing.type === 'password' && missing.value
 					? 'Please choose a password of at least 8 characters.'
-					: 'Please enter your ' + missing.labels[0].textContent.toLowerCase() + '.';
+					: missing.type === 'email' && missing.value
+						? 'Please enter a valid email address.'
+						: 'Please enter your ' + missing.labels[0].textContent.toLowerCase() + '.';
 				errorBox.hidden = false;
 				missing.focus();
 				return;
 			}
-			var payload = {};
-			fields.forEach(function (k) {
-				var input = form.elements[k];
-				payload[k] = input ? (input.type === 'checkbox' ? input.checked : input.value) : '';
+			var fields = {};
+			$$('input[name]', form).forEach(function (input) {
+				if (input.type === 'checkbox') { if (input.checked) fields[input.name] = input.value; }
+				else fields[input.name] = input.value;
 			});
-			if (endpoint === 'account/login') payload.remember = form.elements.rememberme.checked;
+			if (action === 'gm_reset_password') {
+				fields.key = resetLink.key;
+				fields.login = resetLink.login;
+			}
 			var label = button.textContent;
 			button.disabled = true;
 			button.textContent = busyLabel;
 			errorBox.hidden = true;
-			fetch(C.rest + endpoint, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-				.then(function (r) { return r.json().then(function (body) { return { ok: r.ok, body: body }; }); })
-				.then(function (res) {
-					if (!res.ok) throw res.body;
-					// Reload so the page is rebuilt for the signed-in customer.
-					location.replace(location.pathname + '#account');
-					location.reload();
+			ajax(action, fields)
+				.then(function (data) {
+					button.disabled = false;
+					button.textContent = label;
+					done(data, form);
 				})
 				.catch(function (err) {
-					errorBox.textContent = (err && err.message) || 'Something went wrong — please try again.';
+					errorBox.textContent = err.message;
 					errorBox.hidden = false;
 					button.disabled = false;
 					button.textContent = label;
@@ -566,10 +602,23 @@
 		});
 	}
 
-	var loginForm = $('[data-gm-login]');
-	if (loginForm) authSubmit(loginForm, 'account/login', ['log', 'pwd'], 'Signing in…');
-	var registerForm = $('[data-gm-register]');
-	if (registerForm) authSubmit(registerForm, 'account/register', ['name', 'email', 'password', 'website'], 'Creating your account…');
+	authForm($('[data-gm-login]'), 'gm_login', 'Signing in…', openAccount);
+	authForm($('[data-gm-register]'), 'gm_register', 'Creating your account…', openAccount);
+	authForm($('[data-gm-reset]'), 'gm_reset_password', 'Saving…', openAccount);
+	authForm($('[data-gm-forgot]'), 'gm_lost_password', 'Sending…', function (data, form) {
+		var okBox = $('[data-gm-auth-ok]', form);
+		okBox.textContent = data.message;
+		okBox.hidden = false;
+	});
+
+	document.addEventListener('click', function (e) {
+		var link = e.target.closest('[data-gm-logout]');
+		if (!link) return;
+		e.preventDefault();
+		ajax('gm_logout').then(function () {
+			location.replace(location.pathname);
+		}).catch(function () { location.href = link.href; });
+	});
 
 	var payForm = $('[data-gm-pay]');
 	if (payForm) payForm.addEventListener('submit', submitOrder);
@@ -579,6 +628,13 @@
 	/* ------------------------------------------------------------ start */
 
 	load();
+
+	// Arrived from a password-reset email: keep the key in memory, tidy the URL.
+	var params = new URLSearchParams(location.search);
+	if (params.get('gm_reset') && params.get('login')) {
+		resetLink = { key: params.get('gm_reset'), login: params.get('login') };
+		history.replaceState(null, '', location.pathname + '#reset');
+	}
 
 	var startNotice = '';
 	if (C.returned) {

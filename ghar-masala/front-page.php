@@ -392,11 +392,37 @@ $gm_signed_in = is_user_logged_in();
 					<input type="hidden" name="redirect_to" value="<?php echo esc_url( gm_view_url( 'account' ) ); ?>">
 					<p class="gm-error" data-gm-auth-error role="alert" hidden></p>
 					<button type="submit" class="gm-btn gm-btn--block">Sign in</button>
-					<a class="gm-small" href="<?php echo esc_url( wp_lostpassword_url( gm_view_url( 'login' ) ) ); ?>">Forgotten your password?</a>
+					<a class="gm-small" href="#forgot">Forgotten your password?</a>
 				</form>
 				<div class="gm-panel__foot">
 					<p class="gm-small gm-muted">First time ordering? Create an account and your details are saved for next time.</p>
 					<a class="gm-btn-outline gm-btn-outline--block" href="#register">Create an account</a>
+				</div>
+			</div>
+
+			<div data-gm-auth="forgot" hidden>
+				<h3 class="gm-label">Forgotten your password?</h3>
+				<p class="gm-small gm-muted">Enter the email you signed up with and we'll send you a link to choose a new password.</p>
+				<form class="gm-form" data-gm-forgot novalidate>
+					<div class="field"><label for="gm-forgot-email">Email</label><input class="input" id="gm-forgot-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required></div>
+					<p class="gm-error" data-gm-auth-error role="alert" hidden></p>
+					<p class="gm-success" data-gm-auth-ok role="status" hidden></p>
+					<button type="submit" class="gm-btn gm-btn--block">Send me a reset link</button>
+				</form>
+				<div class="gm-panel__foot">
+					<a class="gm-btn-outline gm-btn-outline--block" href="#login">Back to sign in</a>
+				</div>
+			</div>
+
+			<div data-gm-auth="reset" hidden>
+				<h3 class="gm-label">Choose a new password</h3>
+				<form class="gm-form" data-gm-reset novalidate>
+					<div class="field"><label for="gm-new-pass">New password</label><input class="input" id="gm-new-pass" name="password" type="password" autocomplete="new-password" placeholder="At least 8 characters" minlength="8" required></div>
+					<p class="gm-error" data-gm-auth-error role="alert" hidden></p>
+					<button type="submit" class="gm-btn gm-btn--block">Save and sign in</button>
+				</form>
+				<div class="gm-panel__foot">
+					<a class="gm-btn-outline gm-btn-outline--block" href="#forgot">Send a new link</a>
 				</div>
 			</div>
 
@@ -435,7 +461,7 @@ if ( $gm_signed_in ) :
 		<div class="gm-slimbar__inner gm-slimbar__inner--wide">
 			<a class="gm-logo" href="#"><img src="<?php echo esc_url( $gm_logo ); ?>" alt="Ghar Masala" width="76" height="46"></a>
 			<a class="gm-slimbar__link" href="#">← Back to the site</a>
-			<a class="gm-slimbar__link gm-slimbar__link--quiet" href="<?php echo esc_url( wp_logout_url( gm_view_url() ) ); ?>">Sign out</a>
+			<a class="gm-slimbar__link gm-slimbar__link--quiet" href="<?php echo esc_url( wp_logout_url( gm_view_url() ) ); ?>" data-gm-logout>Sign out</a>
 		</div>
 	</header>
 	<div class="gm-narrow gm-narrow--wide gm-page">
