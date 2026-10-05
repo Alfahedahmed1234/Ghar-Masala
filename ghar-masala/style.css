@@ -3,7 +3,7 @@ Theme Name: Ghar Masala
 Theme URI: https://www.facebook.com/gharmasala
 Author: Ghar Masala Ltd
 Description: Pre-order home-style curry delivery for Tividale & Oldbury — menu, basket, bookable 15-minute delivery slots, checkout (pay on delivery or Stripe card payments), allergen table and customer accounts.
-Version: 1.6.0
+Version: 1.7.0
 Requires at least: 6.0
 Requires PHP: 7.4
 License: GNU General Public License v2 or later
@@ -609,6 +609,17 @@ button.gm-slot:hover { border-color: var(--color-accent); background: var(--colo
 .gm-line__row--controls .gm-stepper { margin-left: auto; }
 .gm-line__spice { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-62); }
 .gm-line__spice .input { width: auto; min-height: 38px; padding: 6px 30px 6px 10px; font-size: 14px; background-color: var(--color-bg); }
+
+/* Payment options */
+.gm-pay-option { align-items: flex-start; }
+.gm-pay-option .dot { margin-top: 2px; }
+.gm-pay-option > span:last-child { display: flex; flex-direction: column; gap: 6px; }
+.gm-pay-option small { font-size: 12.5px; }
+.gm-pay-option.is-disabled { opacity: .5; cursor: not-allowed; }
+.gm-paybadges { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.gm-paybadge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border: 1px solid var(--color-divider); background: #fff; font-size: 12px; font-weight: 600; color: #111; line-height: 18px; }
+.gm-paybadge--apple { background: #000; color: #fff; border-color: #000; }
+.gm-paybadge--google b { color: #4285f4; }
 
 /* Reviews */
 .gm-stars { margin: 0 0 8px; color: var(--color-accent-2-500); letter-spacing: 2px; font-size: 16px; }

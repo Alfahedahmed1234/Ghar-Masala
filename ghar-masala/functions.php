@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'GM_VERSION', '1.6.0' );
+define( 'GM_VERSION', '1.7.0' );
 
 /** Cache-busting version: changes whenever the file does. */
 function gm_ver( $file ) {
@@ -19,6 +19,7 @@ require get_template_directory() . '/inc/data.php';
 require get_template_directory() . '/inc/menu-admin.php';
 require get_template_directory() . '/inc/settings.php';
 require get_template_directory() . '/inc/orders.php';
+require get_template_directory() . '/inc/schedule.php';
 require get_template_directory() . '/inc/delivery.php';
 require get_template_directory() . '/inc/accounts.php';
 require get_template_directory() . '/inc/testimonials.php';
@@ -90,6 +91,8 @@ add_action( 'wp_enqueue_scripts', function () {
 		'loggedIn'  => is_user_logged_in(),
 		'minOrder'  => (int) round( gm_rules()['min_order'] * 100 ),
 		'deliveryRules' => gm_delivery_summary(),
+		'cutoffText'    => gm_cutoff_text(),
+		'cashLimit'     => gm_cash_limit(),
 		'phone'     => array(
 			'href'  => 'tel:+' . gm_phone_intl(),
 			'label' => gm_setting( 'phone' ),

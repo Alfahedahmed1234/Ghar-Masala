@@ -50,17 +50,14 @@ add_action( 'init', function () {
  * Slots
  * ------------------------------------------------------------------------ */
 
-/** "18:30" → "6:30" */
-function gm_clock( $hhmm ) {
-	list( $h, $m ) = array_map( 'intval', explode( ':', $hhmm ) );
-	$h12           = $h > 12 ? $h - 12 : $h;
-	return $h12 . ':' . str_pad( (string) $m, 2, '0', STR_PAD_LEFT );
-}
-
+/** "6:30–6:45pm" (or "11:45am–12:00pm" across midday). */
 function gm_slot_window( $hhmm ) {
-	$start = DateTimeImmutable::createFromFormat( 'H:i', $hhmm, gm_tz() );
-	$end   = $start->modify( '+' . gm_rules()['window_mins'] . ' minutes' );
-	return gm_clock( $hhmm ) . '–' . gm_clock( $end->format( 'H:i' ) ) . 'pm';
+	$from = gm_time_label( $hhmm );
+	$to   = gm_time_label( gm_hhmm( gm_minutes( $hhmm ) + (int) gm_rules()['window_mins'] ) );
+	if ( substr( $from, -2 ) === substr( $to, -2 ) ) {
+		$from = substr( $from, 0, -2 );
+	}
+	return $from . '–' . $to;
 }
 
 /** "Thursday 8 October, 6:30–6:45pm" */
@@ -71,18 +68,15 @@ function gm_slot_label( $date, $hhmm ) {
 
 /** Whether orders for $date are still being taken right now. */
 function gm_day_open( DateTimeImmutable $day ) {
-	$rules = gm_rules();
-	if ( in_array( (int) $day->format( 'w' ), $rules['closed_days'], true ) ) {
+	if ( gm_date_closed( $day->format( 'Y-m-d' ) ) ) {
 		return false;
 	}
-	$cutoff = $day->modify( '-1 day' )->setTime( $rules['cutoff_hour'], 0 );
+	$cutoff = $day->modify( '-1 day' )->setTime( gm_rules()['cutoff_hour'], 0 );
 	return gm_now() < $cutoff;
 }
 
-/**
- * Taken slot times keyed by date: [ '2026-10-08' => [ '18:30', … ] ].
- */
-function gm_taken_slots( $from, $to, $exclude_id = 0 ) {
+/** IDs of live orders (confirmed, or unpaid card checkouts still holding their slot). */
+function gm_live_order_ids( array $meta_query ) {
 	$ids = get_posts(
 		array(
 			'post_type'      => 'gm_order',
@@ -90,29 +84,41 @@ function gm_taken_slots( $from, $to, $exclude_id = 0 ) {
 			'posts_per_page' => -1,
 			'fields'         => 'ids',
 			'no_found_rows'  => true,
-			'meta_query'     => array(
-				array(
-					'key'     => '_gm_slot_date',
-					'value'   => array( $from, $to ),
-					'compare' => 'BETWEEN', // Y-m-d strings sort correctly as text.
-				),
-			),
+			'orderby'        => 'ID',
+			'order'          => 'ASC',
+			'meta_query'     => $meta_query,
 		)
 	);
 	$hold_since = time() - gm_rules()['hold_minutes'] * MINUTE_IN_SECONDS;
-	$taken      = array();
+	return array_values(
+		array_filter(
+			array_map( 'intval', $ids ),
+			function ( $id ) use ( $hold_since ) {
+				$status = get_post_meta( $id, '_gm_status', true );
+				return 'confirmed' === $status || ( 'pending' === $status && (int) get_post_meta( $id, '_gm_created', true ) > $hold_since );
+			}
+		)
+	);
+}
+
+/** Orders booked per slot: [ '2026-10-08' => [ '18:30' => 2, … ] ]. */
+function gm_slot_counts( $from, $to ) {
+	$ids    = gm_live_order_ids(
+		array(
+			array(
+				'key'     => '_gm_slot_date',
+				'value'   => array( $from, $to ),
+				'compare' => 'BETWEEN', // Y-m-d strings sort correctly as text.
+			),
+		)
+	);
+	$counts = array();
 	foreach ( $ids as $id ) {
-		if ( (int) $id === (int) $exclude_id ) {
-			continue;
-		}
-		$status = get_post_meta( $id, '_gm_status', true );
-		$live   = 'confirmed' === $status
-			|| ( 'pending' === $status && (int) get_post_meta( $id, '_gm_created', true ) > $hold_since );
-		if ( $live ) {
-			$taken[ get_post_meta( $id, '_gm_slot_date', true ) ][] = get_post_meta( $id, '_gm_slot_time', true );
-		}
+		$date = get_post_meta( $id, '_gm_slot_date', true );
+		$time = get_post_meta( $id, '_gm_slot_time', true );
+		$counts[ $date ][ $time ] = ( $counts[ $date ][ $time ] ?? 0 ) + 1;
 	}
-	return $taken;
+	return $counts;
 }
 
 /**
@@ -121,33 +127,35 @@ function gm_taken_slots( $from, $to, $exclude_id = 0 ) {
 function gm_calendar() {
 	$days_ahead = (int) gm_setting( 'days_ahead' );
 	$today      = gm_now()->setTime( 0, 0 );
-	$first      = $today->modify( '+1 day' );
-	$last       = $today->modify( '+' . $days_ahead . ' days' );
-	$taken      = gm_taken_slots( $first->format( 'Y-m-d' ), $last->format( 'Y-m-d' ) );
-	$rules      = gm_rules();
+	$counts     = gm_slot_counts( $today->modify( '+1 day' )->format( 'Y-m-d' ), $today->modify( '+' . $days_ahead . ' days' )->format( 'Y-m-d' ) );
 	$out        = array();
 
 	for ( $i = 1; $i <= $days_ahead; $i++ ) {
 		$day    = $today->modify( '+' . $i . ' days' );
 		$date   = $day->format( 'Y-m-d' );
-		$closed = in_array( (int) $day->format( 'w' ), $rules['closed_days'], true );
+		$closed = gm_date_closed( $date );
 		$open   = gm_day_open( $day );
 		$slots  = array();
-		foreach ( $rules['slot_starts'] as $t ) {
+		foreach ( gm_rules()['slot_starts'] as $t ) {
+			$cap     = gm_slot_capacity( $date, $t );
+			$full    = ( $counts[ $date ][ $t ] ?? 0 ) >= $cap;
 			$slots[] = array(
 				'time'   => $t,
-				'label'  => gm_clock( $t ) . 'pm',
+				'label'  => gm_time_label( $t ),
 				'window' => gm_slot_window( $t ),
-				'taken'  => in_array( $t, $taken[ $date ] ?? array(), true ),
+				'taken'  => $full,
+				'note'   => $full ? ( 0 === $cap ? 'Unavailable' : 'Taken' ) : '',
 			);
 		}
-		$out[] = array(
+		$any_free = (bool) array_filter( $slots, function ( $sl ) { return ! $sl['taken']; } );
+		$open     = $open && $any_free;
+		$out[]    = array(
 			'date'      => $date,
 			'weekday'   => $day->format( 'D' ),
 			'dateLabel' => $day->format( 'j M' ),
 			'long'      => $day->format( 'l j F' ),
 			'open'      => $open,
-			'status'    => $open ? 'open' : ( $closed ? 'Closed' : 'Orders closed' ),
+			'status'    => $open ? 'open' : ( $closed ? 'Closed' : ( $any_free ? 'Orders closed' : 'Fully booked' ) ),
 			'slots'     => $slots,
 		);
 	}
@@ -269,7 +277,7 @@ function gm_create_order( array $data ) {
 	if ( ! gm_day_open( $day ) || $day > $last ) {
 		return new WP_Error( 'gm_slot_closed', 'Orders for that day have closed — please pick another slot.' );
 	}
-	if ( in_array( $time, gm_taken_slots( $date, $date )[ $date ] ?? array(), true ) ) {
+	if ( ( gm_slot_counts( $date, $date )[ $date ][ $time ] ?? 0 ) >= gm_slot_capacity( $date, $time ) ) {
 		return new WP_Error( 'gm_slot_taken', 'Sorry, that slot has just been taken — please pick another.' );
 	}
 
@@ -311,6 +319,14 @@ function gm_create_order( array $data ) {
 	if ( 'cod' === $payment && ! gm_cod_enabled() ) {
 		return new WP_Error( 'gm_payment', 'Please pay by card.' );
 	}
+	if ( 'cod' === $payment && gm_cash_limit() && $total + $fee > gm_cash_limit() ) {
+		return new WP_Error(
+			'gm_payment_limit',
+			gm_stripe_enabled()
+				? 'Orders over ' . gm_money( gm_cash_limit() ) . ' need to be paid by card, Apple Pay or Google Pay.'
+				: 'Orders over ' . gm_money( gm_cash_limit() ) . ' need to be paid by card — please ring us on ' . gm_setting( 'phone' ) . ' to place this order.'
+		);
+	}
 
 	$id = wp_insert_post(
 		array(
@@ -350,40 +366,24 @@ function gm_create_order( array $data ) {
 		)
 	);
 
-	// Two checkouts can race for the same slot; the earlier order keeps it.
-	foreach ( gm_order_ids_for_slot( $date, $time ) as $other ) {
-		if ( $other < $id ) {
-			update_post_meta( $id, '_gm_status', 'cancelled' );
-			return new WP_Error( 'gm_slot_taken', 'Sorry, that slot has just been taken — please pick another.' );
-		}
+	// Two checkouts can race for the last place in a slot; the earlier orders keep it.
+	$live = gm_order_ids_for_slot( $date, $time );
+	$pos  = array_search( (int) $id, $live, true );
+	if ( false !== $pos && $pos >= gm_slot_capacity( $date, $time ) ) {
+		update_post_meta( $id, '_gm_status', 'cancelled' );
+		return new WP_Error( 'gm_slot_taken', 'Sorry, that slot has just been taken — please pick another.' );
 	}
 
 	return $id;
 }
 
 function gm_order_ids_for_slot( $date, $time ) {
-	$taken = array();
-	$ids   = get_posts(
+	return gm_live_order_ids(
 		array(
-			'post_type'      => 'gm_order',
-			'post_status'    => 'any',
-			'posts_per_page' => -1,
-			'fields'         => 'ids',
-			'no_found_rows'  => true,
-			'meta_query'     => array(
-				array( 'key' => '_gm_slot_date', 'value' => $date ),
-				array( 'key' => '_gm_slot_time', 'value' => $time ),
-			),
+			array( 'key' => '_gm_slot_date', 'value' => $date ),
+			array( 'key' => '_gm_slot_time', 'value' => $time ),
 		)
 	);
-	$hold_since = time() - gm_rules()['hold_minutes'] * MINUTE_IN_SECONDS;
-	foreach ( $ids as $id ) {
-		$status = get_post_meta( $id, '_gm_status', true );
-		if ( 'confirmed' === $status || ( 'pending' === $status && (int) get_post_meta( $id, '_gm_created', true ) > $hold_since ) ) {
-			$taken[] = (int) $id;
-		}
-	}
-	return $taken;
 }
 
 /** Orders placed by a signed-in customer, newest first. */
@@ -418,7 +418,7 @@ function gm_send_order_emails( $id ) {
 	$m    = function ( $key ) use ( $id ) {
 		return get_post_meta( $id, '_gm_' . $key, true );
 	};
-	$paid = 'card' === $o['payment'] ? 'Paid by card' : 'Pay on delivery';
+	$paid = 'card' === $o['payment'] ? 'Paid online' : 'Cash on delivery';
 
 	$lines = '';
 	foreach ( $o['lines'] as $line ) {
@@ -479,7 +479,7 @@ add_action( 'manage_gm_order_posts_custom_column', function ( $col, $id ) {
 			echo esc_html( gm_money( (int) get_post_meta( $id, '_gm_total', true ) ) );
 			break;
 		case 'gm_payment':
-			echo 'card' === get_post_meta( $id, '_gm_payment', true ) ? 'Card' : 'On delivery';
+			echo 'card' === get_post_meta( $id, '_gm_payment', true ) ? 'Paid online' : 'Cash on delivery';
 			break;
 		case 'gm_status':
 			echo esc_html( gm_status_label( $id ) );
@@ -529,7 +529,7 @@ function gm_render_order_box( $post ) {
 	<?php if ( $o['discount'] ) : ?>
 		<p><strong>Discount code entered:</strong> <?php echo esc_html( $o['discount'] ); ?> <em>(not applied automatically — adjust the bill if valid)</em></p>
 	<?php endif; ?>
-	<p><strong>Payment:</strong> <?php echo 'card' === $o['payment'] ? 'Card (Stripe)' : 'Pay on delivery'; ?>
+	<p><strong>Payment:</strong> <?php echo 'card' === $o['payment'] ? 'Card / Apple Pay / Google Pay (Stripe)' : 'Cash on delivery'; ?>
 		<?php if ( $m( 'stripe_session' ) ) : ?> · Stripe session <code><?php echo esc_html( $m( 'stripe_session' ) ); ?></code><?php endif; ?></p>
 	<p><label for="gm-status"><strong>Status:</strong></label>
 		<select name="gm_status" id="gm-status">

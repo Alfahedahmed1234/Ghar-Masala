@@ -15,13 +15,13 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Ordering rules.
  */
 function gm_rules() {
+	$s = gm_schedule(); // Opening times & slots, set in WP Admin (inc/schedule.php).
 	return array(
-		'min_order'    => 10.00,                                   // Minimum basket (pounds).
-		'slot_starts'  => array( '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30' ),
-		'window_mins'  => 15,                                      // Length of each delivery window.
-		'closed_days'  => array( 5, 6 ),                           // 0 = Sunday … 6 = Saturday. Friday & Saturday closed.
-		'cutoff_hour'  => 19,                                      // Orders close at 7pm the day before.
-		'hold_minutes' => 35,                                      // How long an unpaid card checkout holds its slot.
+		'min_order'    => 10.00,                  // Minimum basket (pounds).
+		'slot_starts'  => gm_slot_starts(),
+		'window_mins'  => (int) $s['window'],     // Length of each delivery window.
+		'cutoff_hour'  => (int) $s['cutoff'],     // Orders close at this hour the day before.
+		'hold_minutes' => 35,                     // How long an unpaid card checkout holds its slot.
 		'timezone'     => 'Europe/London',
 	);
 }

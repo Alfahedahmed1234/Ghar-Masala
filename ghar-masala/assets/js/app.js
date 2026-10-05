@@ -333,7 +333,7 @@
 
 		var slots = active.slots.map(function (s) {
 			if (s.taken) {
-				return '<div class="gm-slot gm-slot--taken"><span class="gm-tnum">' + esc(s.label) + '</span><small>Taken</small></div>';
+				return '<div class="gm-slot gm-slot--taken"><span class="gm-tnum">' + esc(s.label) + '</span><small>' + esc(s.note || 'Taken') + '</small></div>';
 			}
 			return '<button type="button" class="gm-slot" data-gm-slot="' + esc(s.time) + '"><span class="gm-tnum">' + esc(s.label) + '</span><small class="gm-tnum">' + esc(s.window) + '</small></button>';
 		}).join('');
@@ -341,7 +341,7 @@
 		box.innerHTML = '<div class="gm-days">' + tabs + '</div>' +
 			'<p class="gm-small gm-muted gm-days__label">' + esc(active.long) + '</p>' +
 			'<div class="gm-slots">' + slots + '</div>' +
-			'<p class="gm-small gm-muted" style="margin-top:20px">Choosing a slot takes you to checkout. Orders must be placed by 7pm the day before delivery.</p>';
+			'<p class="gm-small gm-muted" style="margin-top:20px">Choosing a slot takes you to checkout. Orders must be placed by ' + esc(C.cutoffText) + '.</p>';
 	}
 
 	function pickSlot(time) {
@@ -464,14 +464,32 @@
 	}
 
 	function updatePayButton() {
+		var total = subtotal() + deliveryFee();
+		var overCash = C.cashLimit > 0 && total > C.cashLimit;
+		var cod = $('[data-gm-pay] input[type="radio"][value="cod"]');
+		var cardRadio = $('[data-gm-pay] input[type="radio"][value="card"]');
+		if (cod) {
+			// Orders over the cash limit must be paid online.
+			cod.disabled = overCash;
+			cod.closest('label').classList.toggle('is-disabled', overCash);
+			$('[data-gm-cod-note]').textContent = overCash
+				? 'Not available for orders over ' + money(C.cashLimit)
+				: (C.cashLimit ? 'Orders up to ' + money(C.cashLimit) : '');
+			if (overCash && cod.checked && cardRadio) cardRadio.checked = true;
+		}
 		var card = payMethod() === 'card';
 		var button = $('[data-gm-submit]');
-		var blocked = state.delivery.status === 'out' || state.delivery.status === 'unknown';
-		button.disabled = blocked || state.busy;
-		button.textContent = blocked ? 'Check your postcode' : (card ? 'Pay ' : 'Place order · ') + money(subtotal() + deliveryFee());
-		$('[data-gm-pay-note]').textContent = card
-			? 'You will be taken to Stripe’s secure page to pay — card details never touch this site. Your slot is held while you pay. Discount codes are checked when we confirm your order.'
-			: 'Pay when your food arrives, by cash or card. Discount codes are checked when we confirm your order.';
+		var blockedArea = state.delivery.status === 'out' || state.delivery.status === 'unknown';
+		var blockedCash = !card && overCash; // only cash is offered, and the order is over the limit
+		button.disabled = blockedArea || blockedCash || state.busy;
+		button.textContent = blockedArea ? 'Check your postcode'
+			: blockedCash ? 'Card payment needed'
+			: (card ? 'Pay ' : 'Place order · ') + money(total);
+		$('[data-gm-pay-note]').innerHTML = blockedCash
+			? 'Orders over ' + money(C.cashLimit) + ' need to be paid by card. Please ring us on <a href="' + esc(C.phone.href) + '">' + esc(C.phone.label) + '</a> to place this order.'
+			: card
+				? 'You will be taken to Stripe’s secure page to pay by card, Apple Pay or Google Pay — card details never touch this site. Your slot is held while you pay. Discount codes are checked when we confirm your order.'
+				: 'Pay cash when your food arrives. Discount codes are checked when we confirm your order.';
 	}
 
 	function submitOrder(e) {

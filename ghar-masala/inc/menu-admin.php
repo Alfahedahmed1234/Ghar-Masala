@@ -467,3 +467,114 @@ add_action( 'trashed_post', function ( $id ) {
 add_action( 'created_gm_section', 'gm_menu_changed', 99 );
 add_action( 'edited_gm_section', 'gm_menu_changed', 99 );
 add_action( 'delete_gm_section', 'gm_menu_changed', 99 );
+
+/* ---------------------------------------------------------------------------
+ * Menu → Allergen table: every dish's allergens on one screen
+ * ------------------------------------------------------------------------ */
+
+add_action( 'admin_menu', function () {
+	add_submenu_page( 'edit.php?post_type=gm_dish', 'Allergen table', 'Allergen table', 'edit_posts', 'gm-allergens', 'gm_render_allergen_admin' );
+} );
+
+add_action( 'admin_post_gm_save_allergens', function () {
+	if ( ! current_user_can( 'edit_posts' ) ) {
+		wp_die( 'Not allowed.' );
+	}
+	check_admin_referer( 'gm_save_allergens' );
+	$cols = array_keys( gm_allergen_cols() );
+	foreach ( (array) wp_unslash( $_POST['dish'] ?? array() ) as $id => $row ) {
+		$id = absint( $id );
+		if ( ! $id || 'gm_dish' !== get_post_type( $id ) || ! current_user_can( 'edit_post', $id ) ) {
+			continue;
+		}
+		$marks = array();
+		foreach ( $cols as $key ) {
+			if ( isset( $row[ $key ] ) && in_array( $row[ $key ], array( 'Y', 'P' ), true ) ) {
+				$marks[ $key ] = $row[ $key ];
+			}
+		}
+		update_post_meta( $id, '_gm_allergens', $marks );
+		update_post_meta( $id, '_gm_no_allergen_row', empty( $row['show'] ) ? 1 : 0 );
+	}
+	gm_menu_changed();
+	wp_safe_redirect( admin_url( 'edit.php?post_type=gm_dish&page=gm-allergens&saved=1' ) );
+	exit;
+} );
+
+function gm_render_allergen_admin() {
+	$cols   = gm_allergen_cols();
+	$dishes = get_posts(
+		array(
+			'post_type'      => 'gm_dish',
+			'post_status'    => array( 'publish', 'draft' ),
+			'posts_per_page' => -1,
+			'orderby'        => array( 'menu_order' => 'ASC', 'title' => 'ASC' ),
+		)
+	);
+	// Group by section, in menu order.
+	$groups = array();
+	foreach ( $dishes as $dish ) {
+		$terms = get_the_terms( $dish, 'gm_section' );
+		$term  = $terms && ! is_wp_error( $terms ) ? $terms[0] : null;
+		$key   = $term ? sprintf( '%05d', (int) get_term_meta( $term->term_id, 'gm_order', true ) ) . $term->name : '99999';
+		$groups[ $key ]['title']    = $term ? gm_plain( $term->name ) : 'No section';
+		$groups[ $key ]['dishes'][] = $dish;
+	}
+	ksort( $groups );
+	?>
+	<div class="wrap">
+		<h1>Allergen table</h1>
+		<?php if ( isset( $_GET['saved'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification ?>
+			<div class="notice notice-success is-dismissible"><p>Saved — the allergen table on the website is updated.</p></div>
+		<?php endif; ?>
+		<p>This is the table customers see on the Allergens page. Every dish on the menu is listed — new dishes appear here automatically. <strong>Contains</strong> = Y on the site, <strong>May contain</strong> = P. Untick <strong>Show</strong> to leave a dish out (e.g. canned drinks).</p>
+		<style>
+			.gm-at{border-collapse:collapse;background:#fff}
+			.gm-at th,.gm-at td{border:1px solid #dcdcde;padding:4px 6px;font-size:12.5px;text-align:center}
+			.gm-at thead th{position:sticky;top:32px;background:#006a4e;color:#fff;z-index:1;writing-mode:vertical-rl;transform:rotate(180deg);height:96px;white-space:nowrap}
+			.gm-at thead th.gm-at-dish,.gm-at thead th.gm-at-show{writing-mode:horizontal-tb;transform:none;height:auto;text-align:left}
+			.gm-at td.gm-at-dish{text-align:left;white-space:nowrap;font-weight:600}
+			.gm-at tr.gm-at-group td{background:#f0f0f1;text-align:left;font-weight:600;text-transform:uppercase;font-size:11px;letter-spacing:.06em}
+			.gm-at select{min-width:0;padding:0 18px 0 4px;font-size:12px;min-height:26px}
+			.gm-at select.is-y{background:#006a4e;color:#fff}
+			.gm-at select.is-p{background:#fdf4e2;color:#74490a}
+			.gm-at tr.gm-at-hidden td{opacity:.5}
+			.gm-at-wrap{overflow-x:auto}
+		</style>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="gm_save_allergens">
+			<?php wp_nonce_field( 'gm_save_allergens' ); ?>
+			<div class="gm-at-wrap">
+			<table class="gm-at">
+				<thead><tr><th class="gm-at-dish">Dish</th><th class="gm-at-show">Show</th><?php foreach ( $cols as $label ) : ?><th scope="col"><?php echo esc_html( $label ); ?></th><?php endforeach; ?></tr></thead>
+				<tbody>
+				<?php foreach ( $groups as $group ) : ?>
+					<tr class="gm-at-group"><td colspan="<?php echo count( $cols ) + 2; ?>"><?php echo esc_html( $group['title'] ); ?></td></tr>
+					<?php
+					foreach ( $group['dishes'] as $dish ) :
+						$marks = get_post_meta( $dish->ID, '_gm_allergens', true );
+						$marks = is_array( $marks ) ? $marks : array();
+						$show  = ! get_post_meta( $dish->ID, '_gm_no_allergen_row', true );
+						?>
+						<tr class="<?php echo $show ? '' : 'gm-at-hidden'; ?>">
+							<td class="gm-at-dish"><a href="<?php echo esc_url( get_edit_post_link( $dish ) ); ?>"><?php echo esc_html( gm_plain( $dish->post_title ) ); ?></a><?php echo 'draft' === $dish->post_status ? ' <em>(hidden from menu)</em>' : ''; ?></td>
+							<td><input type="checkbox" name="dish[<?php echo (int) $dish->ID; ?>][show]" value="1" <?php checked( $show ); ?> aria-label="Show <?php echo esc_attr( $dish->post_title ); ?> in the allergen table"></td>
+							<?php foreach ( $cols as $key => $label ) : ?>
+								<?php $v = $marks[ $key ] ?? ''; ?>
+								<td><select name="dish[<?php echo (int) $dish->ID; ?>][<?php echo esc_attr( $key ); ?>]" class="<?php echo $v ? 'is-' . esc_attr( strtolower( $v ) ) : ''; ?>" aria-label="<?php echo esc_attr( $dish->post_title . ' — ' . $label ); ?>" onchange="this.className=this.value?'is-'+this.value.toLowerCase():''">
+									<option value="">—</option>
+									<option value="Y" <?php selected( $v, 'Y' ); ?>>Contains</option>
+									<option value="P" <?php selected( $v, 'P' ); ?>>May contain</option>
+								</select></td>
+							<?php endforeach; ?>
+						</tr>
+					<?php endforeach; ?>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
+			</div>
+			<?php submit_button( 'Save allergen table' ); ?>
+		</form>
+	</div>
+	<?php
+}

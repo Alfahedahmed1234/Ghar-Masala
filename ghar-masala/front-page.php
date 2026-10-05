@@ -11,6 +11,11 @@ $gm_tel       = 'tel:+' . gm_phone_intl();
 $gm_logo      = gm_logo_url();
 $gm_user      = wp_get_current_user();
 $gm_signed_in = is_user_logged_in();
+$gm_hours     = gm_hours_text();                       // e.g. 6–10pm
+$gm_days      = gm_days_text();                        // e.g. Sunday to Thursday
+$gm_cut       = gm_cutoff_text();                      // e.g. 7pm the day before
+$gm_win       = (int) gm_schedule()['window'];         // e.g. 15
+$gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 ?>
 
 <?php get_template_part( 'template-parts/topbar' ); ?>
@@ -33,7 +38,7 @@ $gm_signed_in = is_user_logged_in();
 				<a class="gm-hero__cta" href="#how">How it works</a>
 			</div>
 			<div class="gm-hero__facts">
-				<div><p class="gm-hero__fact">15 min</p><p class="gm-hero__fact-label">Delivery window</p></div>
+				<div><p class="gm-hero__fact"><?php echo esc_html( $gm_win ); ?> min</p><p class="gm-hero__fact-label">Delivery window</p></div>
 				<div><p class="gm-hero__fact">£10</p><p class="gm-hero__fact-label">Minimum spend</p></div>
 				<div><p class="gm-hero__fact">2 miles</p><p class="gm-hero__fact-label">Free radius from Tividale Viewpoint</p></div>
 			</div>
@@ -71,7 +76,7 @@ $gm_signed_in = is_user_logged_in();
 		</div>
 		<div class="gm-cta-row">
 			<a class="gm-btn" href="#menu">See the menu</a>
-			<p class="gm-muted">Deliveries 6–10pm, Sunday to Thursday · Order by 7pm the day before</p>
+			<p class="gm-muted">Deliveries <?php echo esc_html( $gm_hours ); ?>, <?php echo esc_html( $gm_days ); ?> · Order by <?php echo esc_html( $gm_cut ); ?></p>
 		</div>
 	</div>
 </section>
@@ -161,7 +166,7 @@ $gm_signed_in = is_user_logged_in();
 					<div><span>Phone</span><a href="<?php echo esc_attr( $gm_tel ); ?>"><?php echo esc_html( $gm_phone ); ?></a></div>
 					<?php if ( gm_setting( 'email' ) ) : ?><div><span>Email</span><a href="mailto:<?php echo esc_attr( gm_setting( 'email' ) ); ?>"><?php echo esc_html( gm_setting( 'email' ) ); ?></a></div><?php endif; ?>
 					<div><span>Website</span><a href="<?php echo esc_url( home_url( '/' ) ); ?>"><?php echo esc_html( preg_replace( '#^https?://#', '', untrailingslashit( home_url() ) ) ); ?></a></div>
-					<div><span>Deliveries</span><span>6–10pm, Sunday to Thursday</span></div>
+					<div><span>Deliveries</span><span><?php echo esc_html( $gm_hours . ', ' . $gm_days ); ?></span></div>
 					<div><span>Area</span><span>Tividale, Oldbury B69</span></div>
 				</div>
 				<h2 class="gm-label" style="margin-top:28px">Follow us</h2>
@@ -194,9 +199,9 @@ $gm_signed_in = is_user_logged_in();
 			$gm_faqs = array(
 				'What makes you different?'                     => 'Fresh ingredients, cooked on the day of delivery — the pre-order method makes that possible. No base sauce, and nothing ultra-processed like others.',
 				'How do I place an order?'                      => 'Build your basket on the Menu page, then book a delivery slot — that takes you straight to checkout.',
-				'How far ahead can I order?'                    => 'Up to seven days ahead. Orders for a given evening must be placed by 7pm the day before.',
+				'How far ahead can I order?'                    => 'Up to ' . (int) gm_setting( 'days_ahead' ) . ' days ahead. Orders for a given evening must be placed by ' . $gm_cut . '.',
 				'Is there a minimum order?'                     => 'Yes, £10. Delivery is ' . lcfirst( gm_delivery_summary() ) . ' Your charge is worked out from your postcode at checkout.',
-				'What are your delivery hours?'                 => 'Deliveries run 6–10pm, Sunday to Thursday. Each slot gives you a fifteen-minute delivery window.',
+				'What are your delivery hours?'                 => 'Deliveries run ' . $gm_hours . ', ' . $gm_days . '. Each slot gives you a ' . $gm_win . '-minute delivery window.',
 				'Is the food halal?'                            => 'Yes — look for the حلال mark in the header on every page.',
 				'Can I choose how spicy my curry is?'           => 'Yes — curries marked “spice to order” have a spice-level choice in your basket. Madras and Vindaloo are 30p extra.',
 				'Do you cater for allergies?'                   => 'Check the allergen table before you order and add a note at checkout — we will always talk it through with you.',
@@ -296,7 +301,7 @@ $gm_signed_in = is_user_logged_in();
 				</div>
 				<div>
 					<p class="gm-step">02 — Delivery slot</p>
-					<p style="margin:0 0 22px">We deliver Sunday to Thursday, 6–10pm. Slots run every 30 minutes and each gives you a 15-minute delivery window — once taken, a slot closes to everyone else.</p>
+					<p style="margin:0 0 22px">We deliver <?php echo esc_html( $gm_days ); ?>, <?php echo esc_html( $gm_hours ); ?>. Slots run every <?php echo esc_html( $gm_every ); ?> minutes and each gives you a <?php echo esc_html( $gm_win ); ?>-minute delivery window — once a slot is full, it closes to everyone else.</p>
 					<div data-gm-slots></div>
 				</div>
 			</div>
@@ -309,18 +314,18 @@ $gm_signed_in = is_user_logged_in();
 <section class="gm-view" data-view="how" hidden>
 	<div class="gm-wrap gm-page">
 		<h1 class="gm-title" style="max-width:24ch">How ordering works</h1>
-		<p class="gm-lede">Every dish is cooked to order, so the kitchen works to booked slots rather than walk-ins. That means a fixed fifteen-minute delivery window and no guesswork about when your food arrives.</p>
+		<p class="gm-lede">Every dish is cooked to order, so the kitchen works to booked slots rather than walk-ins. That means a fixed <?php echo esc_html( $gm_win ); ?>-minute delivery window and no guesswork about when your food arrives.</p>
 
 		<div class="gm-steps">
 			<?php
 			$gm_pay_copy = gm_stripe_enabled()
-				? 'Pay by card at checkout. Your slot is held while you pay, and confirmed on screen the moment payment clears.'
+				? 'Pay by card, Apple Pay or Google Pay at checkout' . ( gm_cod_enabled() ? ', or cash on delivery' . ( gm_cash_limit() ? ' for orders up to ' . gm_money( gm_cash_limit() ) : '' ) : '' ) . '. Your slot is held while you pay, and confirmed on screen the moment payment clears.'
 				: 'Place your order at checkout and pay when the food arrives. Your slot is confirmed on screen straight away.';
 			$gm_steps    = array(
 				'Fill your basket'       => 'Choose your dishes and tell us the spice level you want. The minimum order is £10, and delivery is worked out from your postcode at checkout — ' . lcfirst( gm_delivery_summary() ),
-				'Book a delivery slot'   => 'Slots run every thirty minutes between 6pm and 10pm, Sunday to Thursday, and can be booked up to a week ahead. Orders close at 7pm the day before delivery.',
+				'Book a delivery slot'   => 'Slots run every ' . $gm_every . ' minutes, ' . $gm_hours . ', ' . $gm_days . ', and can be booked up to ' . (int) gm_setting( 'days_ahead' ) . ' days ahead. Orders close at ' . $gm_cut . '.',
 				'Confirm your order'     => $gm_pay_copy,
-				'Cooked, then delivered' => 'Everything is cooked on the day of delivery, packed into insulated bags and driven to you inside your fifteen-minute window.',
+				'Cooked, then delivered' => 'Everything is cooked on the day of delivery, packed into insulated bags and driven to you inside your ' . $gm_win . '-minute window.',
 			);
 			$n           = 0;
 			foreach ( $gm_steps as $title => $copy ) :
@@ -337,17 +342,17 @@ $gm_signed_in = is_user_logged_in();
 		<div id="delivery" class="gm-split gm-delivery">
 			<div>
 				<h2 class="gm-subtitle">Delivery</h2>
-				<p class="gm-soft" style="max-width:46ch;margin:0 0 26px">We deliver ourselves, out of Tividale, from Sunday to Thursday between 6 and 10pm. Because every order is booked against a slot, your food is timed to land when you asked for it.</p>
+				<p class="gm-soft" style="max-width:46ch;margin:0 0 26px">We deliver ourselves, out of Tividale, <?php echo esc_html( $gm_days ); ?>, <?php echo esc_html( $gm_hours ); ?>. Because every order is booked against a slot, your food is timed to land when you asked for it.</p>
 				<div class="gm-facts">
 					<?php $gm_dr = gm_delivery_rules(); ?>
 					<div><span>Within <?php echo esc_html( gm_number( $gm_dr['free_miles'] ) ); ?> miles of <?php echo esc_html( $gm_dr['area'] ); ?></span><span>Free</span></div>
 					<div><span>Each extra mile</span><span><?php echo esc_html( gm_money( $gm_dr['per_mile'] ) ); ?></span></div>
 					<div><span>Furthest we deliver</span><span><?php echo esc_html( gm_number( $gm_dr['max_miles'] ) ); ?> miles</span></div>
 					<div><span>Minimum order</span><span>£10</span></div>
-					<div><span>Delivery days</span><span>Sunday to Thursday</span></div>
-					<div><span>Delivery window</span><span>15 minutes</span></div>
-					<div><span>Order deadline</span><span>7pm the day before</span></div>
-					<div><span>Payment</span><span><?php echo esc_html( gm_stripe_enabled() ? ( gm_cod_enabled() ? 'Card online or on delivery' : 'Card at checkout' ) : 'On delivery' ); ?></span></div>
+					<div><span>Delivery days</span><span><?php echo esc_html( ucfirst( $gm_days ) ); ?></span></div>
+					<div><span>Delivery window</span><span><?php echo esc_html( $gm_win ); ?> minutes</span></div>
+					<div><span>Order deadline</span><span><?php echo esc_html( $gm_cut ); ?></span></div>
+					<div><span>Payment</span><span><?php echo esc_html( gm_stripe_enabled() ? ( gm_cod_enabled() ? 'Card, Apple Pay, Google Pay or cash' : 'Card, Apple Pay or Google Pay' ) : 'Cash on delivery' ); ?></span></div>
 				</div>
 				<p class="gm-small gm-muted" style="margin-top:20px">Tividale, Oldbury and the surrounding area. Enter your postcode at checkout and the delivery charge is worked out for you.</p>
 				<a class="gm-btn" style="margin-top:30px" href="#menu">Build your order</a>
@@ -543,7 +548,7 @@ if ( $gm_signed_in ) :
 						<p class="gm-small gm-muted gm-tnum"><?php echo esc_html( $gm_order['window'] . ' · ' . $gm_order['ref'] ); ?></p>
 					</div>
 					<p class="gm-history__what"><?php echo esc_html( implode( ', ', $gm_summary ) ); ?></p>
-					<span class="gm-history__status"><?php echo 'card' === $gm_order['payment'] ? 'Paid' : 'Pay on delivery'; ?></span>
+					<span class="gm-history__status"><?php echo 'card' === $gm_order['payment'] ? 'Paid' : 'Cash on delivery'; ?></span>
 					<span class="gm-history__total gm-tnum"><?php echo esc_html( $gm_order['total'] ); ?></span>
 					<button type="button" class="gm-btn-outline" data-gm-reorder="<?php echo esc_attr( wp_json_encode( $gm_reorder ) ); ?>">Order again</button>
 				</div>
@@ -599,8 +604,8 @@ if ( $gm_signed_in ) :
 				<?php if ( gm_stripe_enabled() && gm_cod_enabled() ) : ?>
 					<h3 class="gm-step" style="margin-top:34px">Payment</h3>
 					<div class="gm-form">
-						<label class="radio"><input type="radio" name="payment" value="card" checked><span class="dot"></span>Pay now by card</label>
-						<label class="radio"><input type="radio" name="payment" value="cod"><span class="dot"></span>Pay on delivery (cash or card)</label>
+						<label class="radio gm-pay-option"><input type="radio" name="payment" value="card" checked><span class="dot"></span><span>Pay now by card, Apple Pay or Google Pay<?php get_template_part( 'template-parts/pay-badges' ); ?></span></label>
+						<label class="radio gm-pay-option" data-gm-cod-option><input type="radio" name="payment" value="cod"><span class="dot"></span><span>Pay on delivery (Cash only)<small class="gm-muted" data-gm-cod-note><?php echo gm_cash_limit() ? esc_html( 'Orders up to ' . gm_money( gm_cash_limit() ) ) : ''; ?></small></span></label>
 					</div>
 				<?php else : ?>
 					<input type="hidden" name="payment" value="<?php echo gm_stripe_enabled() ? 'card' : 'cod'; ?>">

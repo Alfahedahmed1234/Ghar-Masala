@@ -19,6 +19,7 @@ function gm_setting_defaults() {
 		'per_mile'       => 1.00,
 		'max_miles'      => 3,
 		'cod_enabled'    => 1,
+		'cash_limit'     => 100,
 		'stripe_secret'  => '',
 		'stripe_webhook' => '',
 	);
@@ -81,6 +82,7 @@ function gm_sanitize_settings( $input ) {
 		'per_mile'       => max( 0, round( (float) ( $input['per_mile'] ?? 1 ), 2 ) ),
 		'max_miles'      => max( 0.5, round( (float) ( $input['max_miles'] ?? 3 ), 1 ) ),
 		'cod_enabled'    => empty( $input['cod_enabled'] ) ? 0 : 1,
+		'cash_limit'     => max( 0, round( (float) ( $input['cash_limit'] ?? 100 ), 2 ) ),
 		'stripe_secret'  => sanitize_text_field( $input['stripe_secret'] ?? '' ),
 		'stripe_webhook' => sanitize_text_field( $input['stripe_webhook'] ?? '' ),
 	);
@@ -113,8 +115,11 @@ function gm_render_settings_page() {
 					<p class="description">Leave blank to use the site admin email.</p></td></tr>
 				<tr><th scope="row"><label for="gm-days">Days bookable ahead</label></th>
 					<td><input type="number" min="1" max="14" id="gm-days" name="gm_settings[days_ahead]" value="<?php echo esc_attr( $o['days_ahead'] ); ?>"></td></tr>
+				<tr><th scope="row"><label for="gm-cash-limit">Cash limit</label></th>
+					<td>£ <input type="number" min="0" step="1" id="gm-cash-limit" name="gm_settings[cash_limit]" value="<?php echo esc_attr( $o['cash_limit'] ); ?>" style="width:6em">
+					<p class="description">Orders over this amount (food + delivery) must be paid by card. Set 0 for no limit.</p></td></tr>
 				<tr><th scope="row">Pay on delivery</th>
-					<td><label><input type="checkbox" name="gm_settings[cod_enabled]" value="1" <?php checked( $o['cod_enabled'], 1 ); ?>> Let customers pay on delivery (cash or card at the door)</label>
+					<td><label><input type="checkbox" name="gm_settings[cod_enabled]" value="1" <?php checked( $o['cod_enabled'], 1 ); ?>> Let customers pay cash on delivery)</label>
 					<p class="description">Always on while no Stripe key is set below.</p></td></tr>
 			</table>
 
@@ -138,7 +143,7 @@ function gm_render_settings_page() {
 			</table>
 
 			<h2 id="gm-card">Card payments (Stripe)</h2>
-			<p>Paste your Stripe keys to take card payments online. Customers are sent to Stripe's secure checkout page — card numbers never touch this website.</p>
+			<p>Paste your Stripe keys to take card payments online. Customers are sent to Stripe's secure checkout page — card numbers never touch this website. <strong>Apple Pay and Google Pay</strong> appear there automatically on phones and browsers that support them, once they are switched on in Stripe → Settings → Payment methods.</p>
 			<table class="form-table" role="presentation">
 				<tr><th scope="row"><label for="gm-sk">Secret key</label></th>
 					<td><input class="regular-text code" type="password" autocomplete="off" id="gm-sk" name="gm_settings[stripe_secret]" value="<?php echo esc_attr( $o['stripe_secret'] ); ?>" placeholder="sk_live_…">
@@ -163,7 +168,12 @@ add_action( 'admin_notices', function () {
 		return;
 	}
 	printf(
-		'<div class="notice notice-warning"><p><strong>Ghar Masala:</strong> the “Pay by card” option is hidden until you add your Stripe secret key. <a href="%s">Add it in Settings → Ghar Masala</a>.</p></div>',
+		'<div class="notice notice-warning"><p><strong>Ghar Masala:</strong> the “Pay by card, Apple Pay or Google Pay” option is hidden until you add your Stripe secret key. <a href="%s">Add it in Settings → Ghar Masala</a>.</p></div>',
 		esc_url( admin_url( 'options-general.php?page=ghar-masala#gm-card' ) )
 	);
 } );
+
+/** Orders above this total (pence) can't be paid cash on delivery; 0 = no limit. */
+function gm_cash_limit() {
+	return (int) round( (float) gm_setting( 'cash_limit' ) * 100 );
+}

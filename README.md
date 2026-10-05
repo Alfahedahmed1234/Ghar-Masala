@@ -38,7 +38,19 @@ Unlike the design prototype, this version takes real orders:
    - Use the URL shown on the settings page, which ends in `/wp-json/ghar-masala/v1/stripe-webhook`.
    - Choose the event `checkout.session.completed`.
    - Paste the endpoint's signing secret (`whsec_…`) into the settings page.
-4. Leave **Pay on delivery** ticked to offer both options, or untick it so customers can only pay by card.
+4. **Apple Pay & Google Pay:** in Stripe, go to **Settings → Payments → Payment methods** and switch on **Apple Pay** and **Google Pay**. They then appear automatically on Stripe's checkout page for customers whose phone or browser supports them, e.g. Safari on iPhone and Chrome on Android. Nothing else needs setting up on the website.
+5. Leave **Pay on delivery** ticked to offer both options, or untick it so customers can only pay online.
+6. **Cash on delivery** is **cash only**. Orders over **£100** (food + delivery) must be paid online. The checkout greys out the cash option above that amount, and the website rejects it too. You can change the amount in **Settings → Ghar Masala → Cash limit** (0 = no limit).
+
+## Opening times & delivery slots (WP Admin → Orders → Opening times & slots)
+
+- **Regular opening times:** tick your delivery days and set the opening and closing times, how often slots start (every 30 minutes, etc.), the delivery window length, how many orders each slot can take, and the order deadline (e.g. 7pm the day before). All the "Deliveries 6–10pm, Sunday to Thursday" wording across the site updates itself.
+- **Closed dates:** list holidays and days off, one per line (`25/12/2026`) or as a range (`31/12/2026 - 02/01/2027`).
+- **Slot grid (next 14 days):** each box is how many orders that slot can take on that date.
+  - Raise a box to take more orders at that time, or set it to **0** to block the time.
+  - Tick **Closed** to shut the whole day.
+  - Booked counts appear in each box, so you can see what's taken.
+  - These changes only affect that date.
 
 ## Managing orders
 
@@ -58,7 +70,8 @@ Discount codes are recorded but **not** taken off automatically. Adjust the bill
 | What | Where |
 | --- | --- |
 | Dishes, prices, descriptions, badges, allergens | **WP Admin → Menu** (see below) |
-| Minimum order, slot times, closed days, 7pm cutoff | `ghar-masala/inc/data.php` → `gm_rules()` |
+| Opening days & times, closed dates, slots | **WP Admin → Orders → Opening times & slots** |
+| Minimum order (£10) | `ghar-masala/inc/data.php` → `gm_rules()` |
 | Page wording (story, FAQs, how it works…) | `ghar-masala/front-page.php` |
 | Footer (social links, hours, company details) | `ghar-masala/template-parts/site-footer.php` |
 | Colours and fonts | top of `ghar-masala/style.css` |
@@ -79,7 +92,7 @@ Manage it in **WP Admin → Menu**. Your original menu was copied in the first t
 - **Standard spice level:** in the dish's **Standard spice level** box, pick Slightly hot, Hot, Madras or Vindaloo, the same scale as the menu's Spice levels key, or "Not spicy / not shown". The dish then shows the matching coloured squares next to its name. This sets how hot the dish is as standard and doesn't change the price. Customers can still ask for a different level in their notes.
 - **Order on the page:** the **Order** box (under "Page Attributes") sets a dish's position within its section, lowest first.
 - **Sections:** use **Menu → Sections** to rename one, change the note beside its heading (e.g. "Served with salad & mint sauce"), set its **Order** on the page, or add a new one (e.g. Desserts). Empty sections are hidden.
-- **Allergens:** the allergen table is built automatically from each dish's Allergens box. Tick "Leave this dish out of the allergen table" for things like canned drinks.
+- **Allergens:** the allergen table on the site is built automatically from each dish's Allergens. New dishes are added to it as soon as you publish them. To see and change every dish at once, use **Menu → Allergen table**: one row per dish, with Contains / May contain for each of the 14 allergens. Tick "Leave this dish out of the allergen table" for things like canned drinks.
 
 Price changes only apply to new orders; past orders keep the price they were placed at. If you use LiteSpeed Cache, the site refreshes itself after each menu change.
 

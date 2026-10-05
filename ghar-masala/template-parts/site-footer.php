@@ -18,8 +18,8 @@ $gm_email = gm_setting( 'email' );
 		<div>
 			<h5 class="gm-footer__head">Hours</h5>
 			<div class="gm-footer__list">
-				<span>Deliveries 6–10pm, Sun–Thu</span>
-				<span class="gm-muted">Order by 7pm the day before</span>
+				<span>Deliveries <?php echo esc_html( gm_hours_text() . ', ' . gm_days_text( true ) ); ?></span>
+				<span class="gm-muted">Order by <?php echo esc_html( gm_cutoff_text() ); ?></span>
 			</div>
 		</div>
 		<div>
