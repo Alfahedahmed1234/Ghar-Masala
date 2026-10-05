@@ -57,8 +57,7 @@ Discount codes are recorded but **not** taken off automatically. Adjust the bill
 
 | What | Where |
 | --- | --- |
-| Dishes, prices, descriptions, badges | `ghar-masala/inc/data.php` → `gm_menu()` |
-| Allergen table | `ghar-masala/inc/data.php` → `gm_allergen_table()` |
+| Dishes, prices, descriptions, badges, allergens | **WP Admin → Menu** (see below) |
 | Minimum order, slot times, closed days, 7pm cutoff | `ghar-masala/inc/data.php` → `gm_rules()` |
 | Page wording (story, FAQs, how it works…) | `ghar-masala/front-page.php` |
 | Footer (social links, hours, company details) | `ghar-masala/template-parts/site-footer.php` |
@@ -67,7 +66,20 @@ Discount codes are recorded but **not** taken off automatically. Adjust the bill
 | News | publish ordinary **Posts**; the News page lists the latest ten |
 | Testimonials | **WP Admin → Testimonials** (see below) |
 
-You can make these edits in **Appearance → Theme File Editor**, or edit them in this repo and upload a new zip. Every dish needs a unique `id`. Do not reuse an old id for a different dish, because past orders and "Order again" refer to dishes by id.
+For the rows marked as files, use **Appearance → Theme File Editor**, or edit them in this repo and upload a new zip.
+
+### The menu
+
+Manage it in **WP Admin → Menu**. Your original menu was copied in the first time the theme ran.
+
+- **Change a price or description:** go to **Menu → All dishes**, click the dish, edit it, then click **Update**.
+- **Add a dish:** click **Add dish**. Fill in the name (top box), the description (box below it), the **Price** and the **Section**. Tick any badges (Vegetarian, Recommended, "Spice to order"), set its **Allergens**, then click **Publish**.
+- **Take a dish off the menu:** switch it to **Draft** to hide it but keep it for later, or move it to the **Bin** to remove it. Customers can't order hidden dishes, even from an old basket or "Order again".
+- **Order on the page:** the **Order** box (under "Page Attributes") sets a dish's position within its section, lowest first.
+- **Sections:** use **Menu → Sections** to rename one, change the note beside its heading (e.g. "Served with salad & mint sauce"), set its **Order** on the page, or add a new one (e.g. Desserts). Empty sections are hidden.
+- **Allergens:** the allergen table is built automatically from each dish's Allergens box. Tick "Leave this dish out of the allergen table" for things like canned drinks.
+
+Price changes only apply to new orders; past orders keep the price they were placed at. If you use LiteSpeed Cache, the site refreshes itself after each menu change.
 
 ### Testimonials
 

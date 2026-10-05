@@ -90,3 +90,7 @@ function gm_testimonials() {
 		)
 	);
 }
+
+add_action( 'add_meta_boxes_gm_testimonial', function () {
+	remove_meta_box( 'slugdiv', 'gm_testimonial', 'normal' );
+} );

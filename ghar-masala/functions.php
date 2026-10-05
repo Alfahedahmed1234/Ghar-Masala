@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'GM_VERSION', '1.2.0' );
+define( 'GM_VERSION', '1.3.0' );
 
 /** Cache-busting version: changes whenever the file does. */
 function gm_ver( $file ) {
@@ -16,6 +16,7 @@ function gm_ver( $file ) {
 }
 
 require get_template_directory() . '/inc/data.php';
+require get_template_directory() . '/inc/menu-admin.php';
 require get_template_directory() . '/inc/settings.php';
 require get_template_directory() . '/inc/orders.php';
 require get_template_directory() . '/inc/delivery.php';
