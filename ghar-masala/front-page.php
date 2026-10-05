@@ -23,13 +23,7 @@ $gm_signed_in = is_user_logged_in();
 		<header class="gm-hero__bar">
 			<a class="gm-logo" href="<?php echo esc_url( gm_view_url() ); ?>"><img src="<?php echo esc_url( $gm_logo ); ?>" alt="Ghar Masala — tradition served with comfort" width="106" height="64"></a>
 			<?php get_template_part( 'template-parts/halal' ); ?>
-			<nav class="gm-nav gm-nav--hero" aria-label="Main">
-				<a href="#menu">Menu</a>
-				<a href="#how">How it works</a>
-				<a href="#story">My story</a>
-				<a href="#account"><?php echo $gm_signed_in ? 'My account' : 'Sign in'; ?></a>
-				<a class="gm-nav__order" href="#order">Your order<span class="gm-tnum" data-gm-badge></span></a>
-			</nav>
+			<?php get_template_part( 'template-parts/nav', null, array( 'variant' => 'hero' ) ); ?>
 		</header>
 		<div class="gm-hero__body">
 			<span class="gm-hero__kicker">Tividale · Oldbury · Fresh to order</span>
@@ -82,16 +76,18 @@ $gm_signed_in = is_user_logged_in();
 	</div>
 </section>
 
-<?php /* ===================================================== Testimonials */ ?>
-<section class="gm-view" data-view="testimonials" hidden>
+<?php /* ===================================================== Reviews */ ?>
+<section class="gm-view" data-view="reviews" hidden>
 	<div class="gm-wrap gm-page">
-		<h1 class="gm-title">Testimonials</h1>
+		<h1 class="gm-title">Reviews</h1>
 		<?php $gm_testimonials = gm_testimonials(); ?>
 		<?php if ( $gm_testimonials ) : ?>
 			<p class="gm-lede">What people who have ordered from Ghar Masala say about the food.</p>
 			<div class="gm-quotes">
 				<?php foreach ( $gm_testimonials as $gm_t ) : ?>
 					<figure class="gm-quotes__item">
+						<?php $gm_stars = (int) get_post_meta( $gm_t->ID, '_gm_rating', true ); ?>
+						<?php if ( $gm_stars ) : ?><p class="gm-stars" aria-label="<?php echo esc_attr( $gm_stars ); ?> out of 5 stars"><?php echo esc_html( str_repeat( '★', $gm_stars ) . str_repeat( '☆', 5 - $gm_stars ) ); ?></p><?php endif; ?>
 						<blockquote class="gm-quotes__text"><?php echo wp_kses_post( wpautop( '“' . trim( trim( $gm_t->post_content ), '"“”' ) . '”' ) ); ?></blockquote>
 						<figcaption class="gm-quotes__by">— <?php echo esc_html( get_the_title( $gm_t ) ); ?></figcaption>
 					</figure>
@@ -100,8 +96,31 @@ $gm_signed_in = is_user_logged_in();
 		<?php else : ?>
 			<p class="gm-lede">Reviews from people who have ordered from Ghar Masala will appear here soon. Ordered from us? We would love to hear what you thought.</p>
 		<?php endif; ?>
-		<div class="gm-cta-row">
-			<a class="gm-btn" href="https://wa.me/<?php echo esc_attr( gm_phone_intl() ); ?>" target="_blank" rel="noopener">Leave us a review</a>
+
+		<div class="gm-cta-row" data-gm-review-cta>
+			<button type="button" class="gm-btn" data-gm-open-review>Leave a review</button>
+		</div>
+		<div class="gm-review" data-gm-review-box hidden>
+			<h2 class="gm-subtitle">Leave a review</h2>
+			<p class="gm-soft">Thank you for taking the time. Reviews appear on this page once we have checked them.</p>
+			<form class="gm-form gm-form--narrow" data-gm-review novalidate>
+				<div class="gm-form__row">
+					<div class="field"><label for="gm-rv-name">Your name</label><input class="input" id="gm-rv-name" name="name" type="text" autocomplete="name" required placeholder="e.g. Sarah"></div>
+					<div class="field"><label for="gm-rv-area">Area (optional)</label><input class="input" id="gm-rv-area" name="area" type="text" placeholder="e.g. Tividale"></div>
+				</div>
+				<fieldset class="gm-rating">
+					<legend>Your rating</legend>
+					<?php for ( $gm_i = 5; $gm_i >= 1; $gm_i-- ) : ?>
+						<input type="radio" id="gm-rv-star-<?php echo (int) $gm_i; ?>" name="rating" value="<?php echo (int) $gm_i; ?>" <?php checked( 5, $gm_i ); ?>><label for="gm-rv-star-<?php echo (int) $gm_i; ?>" title="<?php echo (int) $gm_i; ?> stars">★</label>
+					<?php endfor; ?>
+				</fieldset>
+				<div class="field"><label for="gm-rv-text">Your review</label><textarea class="input" id="gm-rv-text" name="review" rows="5" maxlength="1000" required placeholder="What did you order, and how was it?"></textarea></div>
+				<div class="field"><label for="gm-rv-email">Email (optional — not shown)</label><input class="input" id="gm-rv-email" name="email" type="email" autocomplete="email" placeholder="In case we want to say thank you"></div>
+				<div class="gm-hp" aria-hidden="true"><label for="gm-rv-website">Website</label><input id="gm-rv-website" name="website" type="text" tabindex="-1" autocomplete="off"></div>
+				<p class="gm-error" data-gm-auth-error role="alert" hidden></p>
+				<p class="gm-success" data-gm-auth-ok role="status" hidden></p>
+				<button type="submit" class="gm-btn">Send my review</button>
+			</form>
 		</div>
 	</div>
 </section>
@@ -110,30 +129,58 @@ $gm_signed_in = is_user_logged_in();
 <section class="gm-view" data-view="news" hidden>
 	<div class="gm-wrap gm-page">
 		<h1 class="gm-title">News</h1>
-		<p class="gm-lede">Updates from the kitchen.</p>
-		<div class="gm-news">
-			<?php
-			$gm_posts = get_posts( array( 'posts_per_page' => 10 ) );
-			if ( $gm_posts ) :
-				foreach ( $gm_posts as $gm_post ) :
-					?>
-					<article>
-						<p class="gm-news__date"><?php echo esc_html( get_the_date( 'j F Y', $gm_post ) ); ?></p>
-						<h3><a href="<?php echo esc_url( get_permalink( $gm_post ) ); ?>"><?php echo esc_html( get_the_title( $gm_post ) ); ?></a></h3>
-						<p><?php echo esc_html( get_the_excerpt( $gm_post ) ); ?></p>
-					</article>
-					<?php
-				endforeach;
-			else :
-				?>
-				<article>
-					<p class="gm-news__date">20 August 2026</p>
-					<h3>Online pre-ordering is here</h3>
-					<p>You can now build your order and book a delivery slot up to seven days ahead directly on this site — choose your dishes, pick a 30-minute slot, and pay at checkout. Ringing the kitchen still works too.</p>
-				</article>
-			<?php endif; ?>
+		<p class="gm-lede">The Ghar Masala story so far — milestones and updates from the kitchen.</p>
+		<?php $gm_news = gm_news_items(); ?>
+		<?php if ( $gm_news ) : ?>
+			<ol class="gm-timeline">
+				<?php foreach ( $gm_news as $gm_n ) : ?>
+					<li class="gm-timeline__item">
+						<p class="gm-timeline__date"><?php echo esc_html( $gm_n['date_label'] ); ?></p>
+						<div class="gm-timeline__body">
+							<h3><?php echo esc_html( $gm_n['title'] ); ?></h3>
+							<?php if ( $gm_n['image'] ) : ?><img class="gm-timeline__img" src="<?php echo esc_url( $gm_n['image'] ); ?>" alt="" loading="lazy"><?php endif; ?>
+							<div class="gm-timeline__text"><?php echo wp_kses_post( wpautop( $gm_n['text'] ) ); ?></div>
+						</div>
+					</li>
+				<?php endforeach; ?>
+			</ol>
+		<?php else : ?>
+			<p class="gm-muted" style="margin-top:28px">News coming soon.</p>
+		<?php endif; ?>
+	</div>
+</section>
+
+<?php /* ===================================================== Contact */ ?>
+<section class="gm-view" data-view="contact" hidden>
+	<div class="gm-wrap gm-page">
+		<h1 class="gm-title">Contact us</h1>
+		<p class="gm-lede">Questions about the menu, allergies, catering or an order? Get in touch — we usually reply the same day.</p>
+		<div class="gm-split gm-contact">
+			<div>
+				<div class="gm-facts gm-contact__facts">
+					<div><span>Phone</span><a href="<?php echo esc_attr( $gm_tel ); ?>"><?php echo esc_html( $gm_phone ); ?></a></div>
+					<?php if ( gm_setting( 'email' ) ) : ?><div><span>Email</span><a href="mailto:<?php echo esc_attr( gm_setting( 'email' ) ); ?>"><?php echo esc_html( gm_setting( 'email' ) ); ?></a></div><?php endif; ?>
+					<div><span>Website</span><a href="<?php echo esc_url( home_url( '/' ) ); ?>"><?php echo esc_html( preg_replace( '#^https?://#', '', untrailingslashit( home_url() ) ) ); ?></a></div>
+					<div><span>Deliveries</span><span>6–10pm, Sunday to Thursday</span></div>
+					<div><span>Area</span><span>Tividale, Oldbury B69</span></div>
+				</div>
+				<h2 class="gm-label" style="margin-top:28px">Follow us</h2>
+				<?php get_template_part( 'template-parts/social' ); ?>
+			</div>
+			<div class="gm-panel">
+				<h2 class="gm-label">Send us a message</h2>
+				<form class="gm-form" data-gm-contact novalidate>
+					<div class="field"><label for="gm-ct-name">Name</label><input class="input" id="gm-ct-name" name="name" type="text" autocomplete="name" required></div>
+					<div class="field"><label for="gm-ct-phone">Contact number</label><input class="input" id="gm-ct-phone" name="phone" type="tel" autocomplete="tel" required placeholder="07…"></div>
+					<div class="field"><label for="gm-ct-email">Email (optional)</label><input class="input" id="gm-ct-email" name="email" type="email" autocomplete="email"></div>
+					<div class="field"><label for="gm-ct-msg">Your message (optional)</label><textarea class="input" id="gm-ct-msg" name="message" rows="5" maxlength="2000"></textarea></div>
+					<div class="gm-hp" aria-hidden="true"><label for="gm-ct-website">Website</label><input id="gm-ct-website" name="website" type="text" tabindex="-1" autocomplete="off"></div>
+					<p class="gm-error" data-gm-auth-error role="alert" hidden></p>
+					<p class="gm-success" data-gm-auth-ok role="status" hidden></p>
+					<button type="submit" class="gm-btn gm-btn--block">Send message</button>
+				</form>
+			</div>
 		</div>
-		<p class="gm-muted" style="margin-top:clamp(24px,3vw,34px)">More updates soon.</p>
 	</div>
 </section>
 
@@ -151,7 +198,7 @@ $gm_signed_in = is_user_logged_in();
 				'Is there a minimum order?'                     => 'Yes, £10. Delivery is ' . lcfirst( gm_delivery_summary() ) . ' Your charge is worked out from your postcode at checkout.',
 				'What are your delivery hours?'                 => 'Deliveries run 6–10pm, Sunday to Thursday. Each slot gives you a fifteen-minute delivery window.',
 				'Is the food halal?'                            => 'Yes — look for the حلال mark in the header on every page.',
-				'Can I choose how spicy my curry is?'           => 'Yes, tell us your spice level when you order. Madras and Vindaloo are 30p extra.',
+				'Can I choose how spicy my curry is?'           => 'Yes — curries marked “spice to order” have a spice-level choice in your basket. Madras and Vindaloo are 30p extra.',
 				'Do you cater for allergies?'                   => 'Check the allergen table before you order and add a note at checkout — we will always talk it through with you.',
 				'Can I change or cancel an order after paying?' => 'Ring the kitchen as soon as you can on ' . $gm_phone . ' — we can usually help if your slot has not started yet.',
 			);
@@ -170,7 +217,7 @@ $gm_signed_in = is_user_logged_in();
 <section class="gm-view" data-view="menu" hidden>
 	<div class="gm-wrap gm-page">
 		<h1 class="gm-title">Menu</h1>
-		<p class="gm-lede">Spice level on any curry is adjusted to how you like it — just say when you order. Madras and Vindaloo are 30p extra.</p>
+		<p class="gm-lede">Curries marked “spice to order” can be made as hot as you like — choose the spice level in your basket. Madras and Vindaloo are 30p extra.</p>
 
 		<div class="gm-key">
 			<p class="gm-key__title">Menu key</p>
@@ -226,8 +273,11 @@ $gm_signed_in = is_user_logged_in();
 								<?php endif; ?>
 							</span>
 							<span class="gm-dish__price gm-tnum"><?php echo esc_html( gm_money( (int) round( $item['price'] * 100 ) ) ); ?></span>
-							<span class="gm-dish__qty gm-tnum" data-gm-qty="<?php echo esc_attr( $item['id'] ); ?>"></span>
-							<button type="button" class="gm-btn-outline" data-gm-add="<?php echo esc_attr( $item['id'] ); ?>" aria-label="Add <?php echo esc_attr( $item['name'] ); ?>">Add</button>
+							<span class="gm-stepper" data-gm-stepper="<?php echo esc_attr( $item['id'] ); ?>">
+								<button type="button" class="gm-stepper__btn" data-gm-dec="<?php echo esc_attr( $item['id'] ); ?>" aria-label="Remove one <?php echo esc_attr( $item['name'] ); ?>" disabled>−</button>
+								<span class="gm-stepper__qty gm-tnum" data-gm-qty="<?php echo esc_attr( $item['id'] ); ?>" aria-live="polite">0</span>
+								<button type="button" class="gm-stepper__btn" data-gm-inc="<?php echo esc_attr( $item['id'] ); ?>" aria-label="Add one <?php echo esc_attr( $item['name'] ); ?>">+</button>
+							</span>
 						</div>
 					<?php endforeach; ?>
 				</div>
@@ -242,7 +292,7 @@ $gm_signed_in = is_user_logged_in();
 				<div>
 					<p class="gm-step">01 — Basket</p>
 					<div data-gm-basket></div>
-					<p class="gm-small gm-muted" style="margin-top:18px">Minimum £10 spend. Spice level and allergy notes are taken at checkout.</p>
+					<p class="gm-small gm-muted" style="margin-top:18px">Minimum £10 spend. Pick a spice level for curries above; allergy notes are taken at checkout.</p>
 				</div>
 				<div>
 					<p class="gm-step">02 — Delivery slot</p>
@@ -253,9 +303,6 @@ $gm_signed_in = is_user_logged_in();
 		</div>
 	</div>
 
-	<div class="gm-wrap gm-menu__foot">
-		<p class="gm-allergen-note"><?php echo gm_allergen_note(); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped in gm_allergen_note(). ?></p>
-	</div>
 </section>
 
 <?php /* ===================================================== How it works */ ?>
@@ -545,7 +592,7 @@ if ( $gm_signed_in ) :
 					<div class="field"><label for="gm-addr">Address</label><input class="input" id="gm-addr" name="address" type="text" autocomplete="street-address" placeholder="House number and street" required></div>
 					<div class="field"><label for="gm-post">Postcode</label><input class="input" id="gm-post" name="postcode" type="text" autocomplete="postal-code" placeholder="B69 1NY" required><p class="gm-small gm-muted" data-gm-postcode-msg aria-live="polite" style="margin:6px 0 0"></p></div>
 					<div class="field"><label for="gm-phone">Mobile</label><input class="input" id="gm-phone" name="phone" type="tel" autocomplete="tel" placeholder="07…" required></div>
-					<div class="field"><label for="gm-notes">Spice level &amp; allergy notes</label><input class="input" id="gm-notes" name="instructions" type="text" placeholder="e.g. lamb curry madras, no dairy"></div>
+					<div class="field"><label for="gm-notes">Allergy or delivery notes (optional)</label><input class="input" id="gm-notes" name="instructions" type="text" placeholder="e.g. no dairy, side door"></div>
 					<div class="field"><label for="gm-discount">Discount code (optional)</label><input class="input" id="gm-discount" name="discount" type="text" placeholder="Enter your code"></div>
 					<div class="gm-hp" aria-hidden="true"><label for="gm-website">Website</label><input id="gm-website" name="website" type="text" tabindex="-1" autocomplete="off"></div>
 				</div>

@@ -47,7 +47,7 @@ function gm_stripe_checkout_url( $id ) {
 			'price_data' => array(
 				'currency'     => 'gbp',
 				'unit_amount'  => (int) $line['pence'],
-				'product_data' => array( 'name' => $line['name'] ),
+				'product_data' => array( 'name' => $line['name'] . ( ! empty( $line['spice'] ) ? ' — ' . gm_spice_levels()[ $line['spice'] ]['short'] : '' ) ),
 			),
 		);
 	}

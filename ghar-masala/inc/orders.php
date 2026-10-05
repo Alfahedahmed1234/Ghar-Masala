@@ -231,15 +231,25 @@ function gm_create_order( array $data ) {
 		if ( ! isset( $index[ $id ] ) || $qty < 1 ) {
 			continue;
 		}
-		$qty     = min( $qty, 50 );
+		$qty = min( $qty, 50 );
+
+		// Spice level, only on dishes marked "spice to order".
+		$levels = gm_spice_levels();
+		$level  = sanitize_key( (string) ( $data['spice'][ $id ] ?? '' ) );
+		if ( empty( $index[ $id ]['adjustable'] ) || ! isset( $levels[ $level ] ) ) {
+			$level = '';
+		}
+		$extra = $level ? gm_spice_surcharge( $index[ $id ], $level ) : 0;
+
 		$items[] = array(
 			'id'    => $id,
 			'name'  => $index[ $id ]['name'],
 			'qty'   => $qty,
-			'pence' => $index[ $id ]['pence'],
-			'note'  => sanitize_text_field( mb_substr( (string) ( $data['notes'][ $id ] ?? '' ), 0, 200 ) ),
+			'pence' => $index[ $id ]['pence'] + $extra,
+			'spice' => $level,
+			'note'  => $level ? 'Spice: ' . $levels[ $level ]['short'] . ( $extra ? ' (+' . gm_money( $extra ) . ' each)' : '' ) : '',
 		);
-		$total  += $qty * $index[ $id ]['pence'];
+		$total += $qty * ( $index[ $id ]['pence'] + $extra );
 	}
 	if ( ! $items ) {
 		return new WP_Error( 'gm_empty', 'Your basket is empty.' );
@@ -426,7 +436,7 @@ function gm_send_order_emails( $id ) {
 	$kitchen = "New order!\n\n{$details}\nCustomer\n"
 		. $m( 'name' ) . "\n" . $m( 'address' ) . ', ' . $m( 'postcode' ) . "\n" . $m( 'phone' ) . "\n" . $m( 'email' ) . "\n";
 	if ( $m( 'notes' ) ) {
-		$kitchen .= "\nSpice level & allergy notes:\n" . $m( 'notes' ) . "\n";
+		$kitchen .= "\nAllergy & delivery notes:\n" . $m( 'notes' ) . "\n";
 	}
 	$kitchen .= "\nManage orders: " . admin_url( 'edit.php?post_type=gm_order' ) . "\n";
 
@@ -499,7 +509,7 @@ function gm_render_order_box( $post ) {
 	wp_nonce_field( 'gm_order_status', 'gm_order_status_nonce' );
 	?>
 	<table class="widefat striped" style="margin-bottom:16px">
-		<thead><tr><th>Dish</th><th>Qty</th><th>Note</th><th style="text-align:right">Total</th></tr></thead>
+		<thead><tr><th>Dish</th><th>Qty</th><th>Spice</th><th style="text-align:right">Total</th></tr></thead>
 		<tbody>
 		<?php foreach ( $o['lines'] as $line ) : ?>
 			<tr><td><?php echo esc_html( $line['name'] ); ?></td><td><?php echo (int) $line['qty']; ?></td><td><?php echo esc_html( $line['note'] ); ?></td><td style="text-align:right"><?php echo esc_html( $line['total'] ); ?></td></tr>
@@ -514,7 +524,7 @@ function gm_render_order_box( $post ) {
 		<a href="tel:<?php echo esc_attr( $m( 'phone' ) ); ?>"><?php echo esc_html( $m( 'phone' ) ); ?></a> ·
 		<a href="mailto:<?php echo esc_attr( $m( 'email' ) ); ?>"><?php echo esc_html( $m( 'email' ) ); ?></a></p>
 	<?php if ( $m( 'notes' ) ) : ?>
-		<p><strong>Spice level &amp; allergy notes:</strong><br><?php echo nl2br( esc_html( $m( 'notes' ) ) ); ?></p>
+		<p><strong>Allergy &amp; delivery notes:</strong><br><?php echo nl2br( esc_html( $m( 'notes' ) ) ); ?></p>
 	<?php endif; ?>
 	<?php if ( $o['discount'] ) : ?>
 		<p><strong>Discount code entered:</strong> <?php echo esc_html( $o['discount'] ); ?> <em>(not applied automatically — adjust the bill if valid)</em></p>

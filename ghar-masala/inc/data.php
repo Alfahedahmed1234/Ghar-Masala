@@ -97,9 +97,20 @@ function gm_spice_levels() {
 	return array(
 		'slight'   => array( 'label' => 'Slightly hot', 'short' => 'Slightly hot', 'dots' => 1, 'shade' => '', 'extra' => '' ),
 		'hot'      => array( 'label' => 'Hot', 'short' => 'Hot', 'dots' => 2, 'shade' => '', 'extra' => '' ),
-		'madras'   => array( 'label' => 'Madras — hot', 'short' => 'Madras', 'dots' => 3, 'shade' => '600', 'extra' => '30p' ),
-		'vindaloo' => array( 'label' => 'Vindaloo — hot', 'short' => 'Vindaloo', 'dots' => 4, 'shade' => '700', 'extra' => '30p' ),
+		'madras'   => array( 'label' => 'Madras — hot', 'short' => 'Madras', 'dots' => 3, 'shade' => '600', 'extra' => '30p', 'extra_pence' => 30 ),
+		'vindaloo' => array( 'label' => 'Vindaloo — hot', 'short' => 'Vindaloo', 'dots' => 4, 'shade' => '700', 'extra' => '30p', 'extra_pence' => 30 ),
 	);
+}
+
+/**
+ * Extra charge (pence) when a customer picks a spice level for a dish:
+ * Madras and Vindaloo cost extra unless the dish is already that hot as standard.
+ */
+function gm_spice_surcharge( array $item, $level ) {
+	$levels   = gm_spice_levels();
+	$extra    = $levels[ $level ]['extra_pence'] ?? 0;
+	$standard = $levels[ $item['spice'] ?? '' ]['extra_pence'] ?? 0;
+	return ( $extra && ! $standard ) ? $extra : 0;
 }
 
 /** The four-square spice meter for a level key, e.g. gm_spice_dots( 'hot' ). */

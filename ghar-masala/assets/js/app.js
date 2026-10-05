@@ -7,7 +7,10 @@
 
 	var C = window.GM_CONFIG || {};
 	var STORE_KEY = 'gm_basket_v1';
-	var VIEWS = ['home', 'menu', 'how', 'story', 'testimonials', 'news', 'faq', 'allergens', 'login', 'account', 'pay', 'done'];
+	var VIEWS = ['home', 'menu', 'how', 'story', 'reviews', 'news', 'contact', 'faq', 'allergens', 'login', 'account', 'pay', 'done'];
+	var ALIASES = { testimonials: 'reviews' };
+	var LEVELS = C.spiceLevels || {};
+	var CAN_HOVER = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 	var BARE_VIEWS = ['login', 'account', 'pay', 'done']; // own slim header, no footer
 
 	var items = {};
@@ -20,7 +23,7 @@
 	var state = {
 		view: 'home',
 		cart: {},
-		notes: {},
+		spice: {}, // id -> chosen spice level ('' = the dish's standard)
 		days: null,
 		day: null,
 		slot: null, // { date, time, label }
@@ -50,7 +53,7 @@
 	}
 
 	function save() {
-		try { localStorage.setItem(STORE_KEY, JSON.stringify({ cart: state.cart, notes: state.notes })); } catch (e) { /* private mode */ }
+		try { localStorage.setItem(STORE_KEY, JSON.stringify({ cart: state.cart, spice: state.spice })); } catch (e) { /* private mode */ }
 	}
 
 	function load() {
@@ -61,14 +64,25 @@
 					var q = parseInt(s.cart[id], 10);
 					if (items[id] && q > 0) state.cart[id] = Math.min(q, 50);
 				});
-				state.notes = s.notes || {};
+				Object.keys(s.spice || {}).forEach(function (id) {
+					if (items[id] && items[id].adjustable && LEVELS[s.spice[id]]) state.spice[id] = s.spice[id];
+				});
 			}
 		} catch (e) { /* ignore */ }
 	}
 
+	/** Madras/Vindaloo cost extra unless the dish is already that hot as standard (matches the server). */
+	function surcharge(id) {
+		var chosen = LEVELS[state.spice[id]];
+		var standard = LEVELS[items[id].spice];
+		return chosen && chosen.extra_pence && !(standard && standard.extra_pence) ? chosen.extra_pence : 0;
+	}
+
+	function unitPrice(id) { return items[id].price + surcharge(id); }
+
 	function subtotal() {
 		return Object.keys(state.cart).reduce(function (sum, id) {
-			return sum + items[id].price * state.cart[id];
+			return sum + unitPrice(id) * state.cart[id];
 		}, 0);
 	}
 
@@ -80,7 +94,7 @@
 		var next = (state.cart[id] || 0) + delta;
 		if (next <= 0) {
 			delete state.cart[id];
-			delete state.notes[id];
+			delete state.spice[id];
 		} else {
 			state.cart[id] = Math.min(next, 50);
 		}
@@ -107,6 +121,8 @@
 			view = hash === 'order' ? 'menu' : 'how';
 		}
 		if (!view || view === 'top') view = 'home';
+		if (ALIASES[view]) view = ALIASES[view];
+		closeMenus();
 		var AUTH_MODES = ['register', 'forgot', 'reset'];
 		var authMode = AUTH_MODES.indexOf(view) !== -1 ? view : 'login';
 		if (authMode === 'reset' && !resetLink) authMode = 'forgot';
@@ -151,8 +167,12 @@
 			if (active) a.setAttribute('aria-current', 'page');
 			else a.removeAttribute('aria-current');
 		});
+		// Highlight "Home" / "Menu" when one of their sub-pages is open.
+		$$('.gm-nav__item--sub').forEach(function (li) {
+			li.classList.toggle('is-current', !!li.querySelector('[aria-current="page"]'));
+		});
 
-		var titles = { home: '', menu: 'Menu', how: 'How it works', story: 'My story', testimonials: 'Testimonials', news: 'News', faq: 'FAQs', allergens: 'Allergens', login: 'Sign in', account: 'My account', pay: 'Checkout', done: 'Order confirmed' };
+		var titles = { home: '', menu: 'Menu', how: 'How it works', story: 'My story', reviews: 'Reviews', news: 'News', contact: 'Contact us', faq: 'FAQs', allergens: 'Allergens', login: 'Sign in', account: 'My account', pay: 'Checkout', done: 'Order confirmed' };
 		if (!show.baseTitle) show.baseTitle = document.title;
 		document.title = titles[view] ? titles[view] + ' — ' + show.baseTitle : show.baseTitle;
 
@@ -168,13 +188,60 @@
 
 	function renderCart() {
 		var n = count();
-		$$('[data-gm-badge]').forEach(function (el) { el.textContent = n ? ' · ' + n : ''; });
+		$$('[data-gm-badge]').forEach(function (el) {
+			el.textContent = n;
+			el.hidden = !n;
+		});
+		$$('[data-gm-baskettoggle]').forEach(function (el) {
+			el.setAttribute('aria-label', n ? 'Your order, ' + n + ' item' + (n === 1 ? '' : 's') : 'Your order, empty');
+		});
 		$$('[data-gm-qty]').forEach(function (el) {
-			var q = state.cart[el.getAttribute('data-gm-qty')];
-			el.textContent = q ? '×' + q : '';
+			var id = el.getAttribute('data-gm-qty');
+			var q = state.cart[id] || 0;
+			el.textContent = q;
+			var stepper = el.closest('.gm-stepper');
+			if (stepper) {
+				stepper.classList.toggle('is-active', q > 0);
+				$('[data-gm-dec]', stepper).disabled = q === 0;
+			}
 		});
 		renderBasket();
+		renderMini();
 		renderSlots();
+	}
+
+	/** Spice-level dropdown for dishes marked "spice to order". */
+	function spiceSelect(id) {
+		var it = items[id];
+		if (!it.adjustable) return '';
+		var standard = LEVELS[it.spice];
+		var opts = '<option value="">Standard' + (standard ? ' (' + esc(standard.short) + ')' : '') + '</option>';
+		Object.keys(LEVELS).forEach(function (key) {
+			var l = LEVELS[key];
+			var extra = l.extra_pence && !(standard && standard.extra_pence) ? ' (+' + money(l.extra_pence) + ')' : '';
+			opts += '<option value="' + esc(key) + '"' + (state.spice[id] === key ? ' selected' : '') + '>' + esc(l.short) + extra + '</option>';
+		});
+		return '<label class="gm-line__spice"><span>Spice</span><select class="input" data-gm-spice="' + esc(id) + '" aria-label="Spice level for ' + esc(it.name) + '">' + opts + '</select></label>';
+	}
+
+	function stepper(id) {
+		var it = items[id];
+		return '<span class="gm-stepper is-active">' +
+			'<button type="button" class="gm-stepper__btn" data-gm-dec="' + esc(id) + '" aria-label="Remove one ' + esc(it.name) + '">−</button>' +
+			'<span class="gm-stepper__qty gm-tnum">' + state.cart[id] + '</span>' +
+			'<button type="button" class="gm-stepper__btn" data-gm-inc="' + esc(id) + '" aria-label="Add one ' + esc(it.name) + '">+</button>' +
+			'</span>';
+	}
+
+	function lineHtml(id) {
+		var it = items[id];
+		return '<div class="gm-line">' +
+			'<div class="gm-line__row">' +
+			'<span class="gm-line__name">' + esc(it.name) + '</span>' +
+			'<span class="gm-line__total gm-tnum">' + money(unitPrice(id) * state.cart[id]) + '</span>' +
+			'</div>' +
+			'<div class="gm-line__row gm-line__row--controls">' + spiceSelect(id) + stepper(id) + '</div>' +
+			'</div>';
 	}
 
 	function renderBasket() {
@@ -185,24 +252,25 @@
 			box.innerHTML = '<p class="gm-muted">Nothing in the basket yet. Add dishes from the menu above and they appear here.</p>';
 			return;
 		}
-		var sub = subtotal();
-		box.innerHTML = ids.map(function (id) {
-			var it = items[id];
-			var q = state.cart[id];
-			return '<div class="gm-line">' +
-				'<div class="gm-line__row">' +
-				'<span class="gm-line__name">' + esc(it.name) + '</span>' +
-				'<button type="button" class="gm-qtybtn" data-gm-dec="' + esc(id) + '" aria-label="One fewer ' + esc(it.name) + '">–</button>' +
-				'<span class="gm-line__qty gm-tnum">' + q + '</span>' +
-				'<button type="button" class="gm-qtybtn" data-gm-inc="' + esc(id) + '" aria-label="One more ' + esc(it.name) + '">+</button>' +
-				'<span class="gm-line__total gm-tnum">' + money(it.price * q) + '</span>' +
-				'</div>' +
-				'<input class="input gm-line__note" type="text" maxlength="200" data-gm-note="' + esc(id) + '" placeholder="Add a note — e.g. medium spice, no onions" aria-label="Note for ' + esc(it.name) + '" value="' + esc(state.notes[id] || '') + '">' +
-				'</div>';
-		}).join('') +
-			'<div class="gm-sum"><span class="gm-soft">Subtotal</span><span class="gm-tnum">' + money(sub) + '</span></div>' +
+		box.innerHTML = ids.map(lineHtml).join('') +
+			'<div class="gm-sum"><span class="gm-soft">Subtotal</span><span class="gm-tnum">' + money(subtotal()) + '</span></div>' +
 			'<div class="gm-sum gm-sum--tight"><span class="gm-soft">Delivery</span><span class="gm-soft">From your postcode at checkout</span></div>' +
 			'<p class="gm-small gm-muted" style="margin:4px 0 0">' + esc(C.deliveryRules) + '</p>';
+	}
+
+	/** The mini basket that drops down from "Your order" in the header. */
+	function renderMini() {
+		var ids = Object.keys(state.cart);
+		var sub = subtotal();
+		var html = ids.length
+			? '<p class="gm-mini__title">Your order</p>' +
+				'<div class="gm-mini__lines">' + ids.map(lineHtml).join('') + '</div>' +
+				'<div class="gm-sum"><span>Subtotal</span><span class="gm-tnum">' + money(sub) + '</span></div>' +
+				(sub < C.minOrder ? '<p class="gm-small gm-warn" style="margin:6px 0 0">Add ' + money(C.minOrder - sub) + ' more to reach the ' + money(C.minOrder) + ' minimum.</p>' : '') +
+				'<a class="gm-btn gm-btn--block gm-mini__go" href="#order" data-gm-close-mini>' + (sub < C.minOrder ? 'View your order' : 'Choose a delivery slot') + '</a>'
+			: '<p class="gm-mini__title">Your basket is empty</p><p class="gm-small gm-muted">Add dishes from the menu and they will appear here.</p>' +
+				'<a class="gm-btn gm-btn--block gm-mini__go" href="#menu" data-gm-close-mini>See the menu</a>';
+		$$('[data-gm-mini]').forEach(function (el) { el.innerHTML = html; });
 	}
 
 	/* ------------------------------------------------------------ slots */
@@ -297,10 +365,11 @@
 		var box = $('[data-gm-summary]');
 		box.innerHTML = Object.keys(state.cart).map(function (id) {
 			var it = items[id];
-			var note = (state.notes[id] || '').trim();
+			var level = LEVELS[state.spice[id]];
+			var note = level ? 'Spice: ' + level.short + (surcharge(id) ? ' (+' + money(surcharge(id)) + ' each)' : '') : '';
 			return '<div class="gm-sumline"><span><span>' + state.cart[id] + ' × ' + esc(it.name) + '</span>' +
 				(note ? '<small>' + esc(note) + '</small>' : '') +
-				'</span><span class="gm-tnum">' + money(it.price * state.cart[id]) + '</span></div>';
+				'</span><span class="gm-tnum">' + money(unitPrice(id) * state.cart[id]) + '</span></div>';
 		}).join('') + '<div data-gm-totals></div>';
 
 		// Pre-fill from the customer's last order when signed in.
@@ -418,7 +487,7 @@
 			return;
 		}
 
-		var payload = { items: state.cart, notes: state.notes, date: state.slot.date, time: state.slot.time, payment: payMethod() };
+		var payload = { items: state.cart, spice: state.spice, date: state.slot.date, time: state.slot.time, payment: payMethod() };
 		['name', 'email', 'address', 'postcode', 'phone', 'instructions', 'discount', 'website'].forEach(function (k) {
 			payload[k] = form.elements[k] ? form.elements[k].value.trim() : '';
 		});
@@ -468,7 +537,7 @@
 
 	function clearBasket() {
 		state.cart = {};
-		state.notes = {};
+		state.spice = {};
 		state.slot = null;
 		state.days = null;
 		save();
@@ -492,13 +561,11 @@
 	/* ------------------------------------------------------------ events */
 
 	document.addEventListener('click', function (e) {
-		var t = e.target.closest('[data-gm-add],[data-gm-inc],[data-gm-dec],[data-gm-day],[data-gm-slot],[data-gm-reorder],[data-gm-restart],[data-gm-release]');
+		var t = e.target.closest('[data-gm-inc],[data-gm-dec],[data-gm-day],[data-gm-slot],[data-gm-reorder],[data-gm-restart],[data-gm-release]');
 		if (!t) return;
-		if (t.hasAttribute('data-gm-add')) {
-			bump(t.getAttribute('data-gm-add'), 1);
-			notice('');
-		} else if (t.hasAttribute('data-gm-inc')) {
+		if (t.hasAttribute('data-gm-inc')) {
 			bump(t.getAttribute('data-gm-inc'), 1);
+			notice('');
 		} else if (t.hasAttribute('data-gm-dec')) {
 			bump(t.getAttribute('data-gm-dec'), -1);
 		} else if (t.hasAttribute('data-gm-day')) {
@@ -509,7 +576,7 @@
 		} else if (t.hasAttribute('data-gm-reorder')) {
 			var cart = JSON.parse(t.getAttribute('data-gm-reorder'));
 			state.cart = {};
-			state.notes = {};
+			state.spice = {};
 			Object.keys(cart).forEach(function (id) { if (items[id]) state.cart[id] = cart[id]; });
 			save();
 			renderCart();
@@ -522,17 +589,104 @@
 	});
 
 	document.addEventListener('input', function (e) {
-		var id = e.target.getAttribute && e.target.getAttribute('data-gm-note');
-		if (id) {
-			state.notes[id] = e.target.value;
-			save();
-		}
 		if (e.target.name === 'postcode' && e.target.closest('[data-gm-pay]')) checkDelivery(e.target.value);
 	});
 
 	document.addEventListener('change', function (e) {
 		if (e.target.name === 'payment') updatePayButton();
+		var spiceFor = e.target.getAttribute && e.target.getAttribute('data-gm-spice');
+		if (spiceFor) {
+			if (e.target.value) state.spice[spiceFor] = e.target.value;
+			else delete state.spice[spiceFor];
+			save();
+			renderCart();
+		}
 	});
+
+	/* ------------------------------------------------------------ header: dropdowns, phone menu, mini basket */
+
+	var miniTimer = null;
+
+	function setMini(wrap, open) {
+		clearTimeout(miniTimer);
+		$$('[data-gm-basketwrap]').forEach(function (w) {
+			var on = open && w === wrap;
+			$('[data-gm-mini]', w).hidden = !on;
+			w.classList.toggle('is-open', on);
+			$('[data-gm-baskettoggle]', w).setAttribute('aria-expanded', on ? 'true' : 'false');
+		});
+	}
+
+	function closeMenus() {
+		setMini(null, false);
+		$$('[data-gm-nav]').forEach(function (nav) {
+			nav.classList.remove('is-open');
+			$('[data-gm-navtoggle]', nav).setAttribute('aria-expanded', 'false');
+		});
+		$$('.gm-nav__item--sub').forEach(function (li) {
+			li.classList.remove('is-open');
+			$('[data-gm-subtoggle]', li).setAttribute('aria-expanded', 'false');
+		});
+	}
+
+	document.addEventListener('click', function (e) {
+		var navToggle = e.target.closest('[data-gm-navtoggle]');
+		if (navToggle) {
+			var nav = navToggle.closest('[data-gm-nav]');
+			var open = !nav.classList.contains('is-open');
+			closeMenus();
+			nav.classList.toggle('is-open', open);
+			navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+			return;
+		}
+		var sub = e.target.closest('[data-gm-subtoggle]');
+		if (sub) {
+			var li = sub.closest('.gm-nav__item--sub');
+			var isOpen = !li.classList.contains('is-open');
+			li.classList.toggle('is-open', isOpen);
+			sub.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+			return;
+		}
+		var basket = e.target.closest('[data-gm-baskettoggle]');
+		if (basket && !CAN_HOVER) {
+			// Touch screens: tap opens the mini basket rather than leaving the page.
+			e.preventDefault();
+			var wrap = basket.closest('[data-gm-basketwrap]');
+			setMini(wrap, !wrap.classList.contains('is-open'));
+			return;
+		}
+		if (e.target.closest('[data-gm-close-mini]')) {
+			closeMenus();
+			return;
+		}
+		// Click outside the header menus closes them. (A tap on + / − inside the
+		// mini basket re-draws it, detaching the target — that is not "outside".)
+		if (e.target.isConnected && !e.target.closest('[data-gm-nav]')) closeMenus();
+	});
+
+	$$('[data-gm-basketwrap]').forEach(function (wrap) {
+		if (!CAN_HOVER) return;
+		wrap.addEventListener('mouseenter', function () { setMini(wrap, true); });
+		wrap.addEventListener('mouseleave', function () {
+			clearTimeout(miniTimer);
+			miniTimer = setTimeout(function () { setMini(null, false); }, 300);
+		});
+	});
+
+	document.addEventListener('keydown', function (e) {
+		if (e.key === 'Escape') closeMenus();
+	});
+
+	/* ------------------------------------------------------------ reviews & contact */
+
+	var openReview = $('[data-gm-open-review]');
+	if (openReview) {
+		openReview.addEventListener('click', function () {
+			$('[data-gm-review-box]').hidden = false;
+			$('[data-gm-review-cta]').hidden = true;
+			$('#gm-rv-name').focus();
+		});
+	}
 
 	/* ------------------------------------------------------------ sign in / create account */
 
@@ -562,7 +716,7 @@
 			var errorBox = $('[data-gm-auth-error]', form);
 			var okBox = $('[data-gm-auth-ok]', form);
 			var button = $('button[type="submit"]', form);
-			var missing = $$('input[required]', form).filter(function (i) { return !i.value.trim() || !i.checkValidity(); })[0];
+			var missing = $$('input[required],textarea[required]', form).filter(function (i) { return !i.value.trim() || !i.checkValidity(); })[0];
 			if (okBox) okBox.hidden = true;
 			if (missing) {
 				errorBox.textContent = missing.type === 'password' && missing.value
@@ -575,8 +729,8 @@
 				return;
 			}
 			var fields = {};
-			$$('input[name]', form).forEach(function (input) {
-				if (input.type === 'checkbox') { if (input.checked) fields[input.name] = input.value; }
+			$$('input[name],textarea[name],select[name]', form).forEach(function (input) {
+				if (input.type === 'checkbox' || input.type === 'radio') { if (input.checked) fields[input.name] = input.value; }
 				else fields[input.name] = input.value;
 			});
 			if (action === 'gm_reset_password') {
@@ -605,10 +759,20 @@
 	authForm($('[data-gm-login]'), 'gm_login', 'Signing in…', openAccount);
 	authForm($('[data-gm-register]'), 'gm_register', 'Creating your account…', openAccount);
 	authForm($('[data-gm-reset]'), 'gm_reset_password', 'Saving…', openAccount);
-	authForm($('[data-gm-forgot]'), 'gm_lost_password', 'Sending…', function (data, form) {
+	function showThanks(data, form) {
 		var okBox = $('[data-gm-auth-ok]', form);
 		okBox.textContent = data.message;
 		okBox.hidden = false;
+	}
+	authForm($('[data-gm-forgot]'), 'gm_lost_password', 'Sending…', showThanks);
+	authForm($('[data-gm-contact]'), 'gm_contact', 'Sending…', function (data, form) {
+		form.reset();
+		showThanks(data, form);
+	});
+	authForm($('[data-gm-review]'), 'gm_review', 'Sending…', function (data, form) {
+		form.reset();
+		showThanks(data, form);
+		$('button[type="submit"]', form).hidden = true;
 	});
 
 	document.addEventListener('click', function (e) {

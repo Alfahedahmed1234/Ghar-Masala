@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'GM_VERSION', '1.5.0' );
+define( 'GM_VERSION', '1.6.0' );
 
 /** Cache-busting version: changes whenever the file does. */
 function gm_ver( $file ) {
@@ -22,6 +22,8 @@ require get_template_directory() . '/inc/orders.php';
 require get_template_directory() . '/inc/delivery.php';
 require get_template_directory() . '/inc/accounts.php';
 require get_template_directory() . '/inc/testimonials.php';
+require get_template_directory() . '/inc/news.php';
+require get_template_directory() . '/inc/contact.php';
 require get_template_directory() . '/inc/stripe.php';
 require get_template_directory() . '/inc/rest.php';
 
@@ -69,6 +71,7 @@ add_action( 'wp_enqueue_scripts', function () {
 				'veg'        => ! empty( $item['veg'] ),
 				'rec'        => ! empty( $item['rec'] ),
 				'adjustable' => ! empty( $item['adjustable'] ),
+				'spice'      => (string) ( $item['spice'] ?? '' ),
 			);
 		}
 		$menu[] = array(
@@ -92,6 +95,7 @@ add_action( 'wp_enqueue_scripts', function () {
 			'label' => gm_setting( 'phone' ),
 		),
 		'menu'      => $menu,
+		'spiceLevels' => gm_spice_levels(),
 		'payments'  => array(
 			'card' => gm_stripe_enabled(),
 			'cod'  => gm_cod_enabled(),
@@ -162,3 +166,26 @@ function gm_allergen_note() {
 		esc_html( gm_setting( 'phone' ) )
 	);
 }
+
+/**
+ * Other pages (privacy policy, blog posts…) share the header but not app.js,
+ * so give them just enough script for the phone menu and dropdown toggles.
+ * The basket link there simply goes to the order section on the home page.
+ */
+add_action( 'wp_footer', function () {
+	if ( is_front_page() ) {
+		return;
+	}
+	?>
+	<script>
+	document.addEventListener('click', function (e) {
+		var t = e.target.closest('[data-gm-navtoggle],[data-gm-subtoggle]');
+		if (!t) return;
+		var box = t.closest(t.hasAttribute('data-gm-navtoggle') ? '[data-gm-nav]' : '.gm-nav__item--sub');
+		var open = !box.classList.contains('is-open');
+		box.classList.toggle('is-open', open);
+		t.setAttribute('aria-expanded', open ? 'true' : 'false');
+	});
+	</script>
+	<?php
+} );

@@ -75,6 +75,7 @@ Manage it in **WP Admin → Menu**. Your original menu was copied in the first t
 - **Change a price or description:** go to **Menu → All dishes**, click the dish, edit it, then click **Update**.
 - **Add a dish:** click **Add dish**. Fill in the name (top box), the description (box below it), the **Price** and the **Section**. Tick any badges (Vegetarian, Recommended, "Spice to order"), set its **Allergens**, then click **Publish**.
 - **Take a dish off the menu:** switch it to **Draft** to hide it but keep it for later, or move it to the **Bin** to remove it. Customers can't order hidden dishes, even from an old basket or "Order again".
+- **Customers choosing spice:** dishes with "Spice to order" ticked get a **Spice** dropdown in the customer's basket (Standard, Slightly hot, Hot, Madras, Vindaloo). Madras and Vindaloo add 30p per dish, unless the dish is already Madras or Vindaloo as standard. The chosen level appears on the order, in the kitchen email and on the card payment.
 - **Standard spice level:** in the dish's **Standard spice level** box, pick Slightly hot, Hot, Madras or Vindaloo, the same scale as the menu's Spice levels key, or "Not spicy / not shown". The dish then shows the matching coloured squares next to its name. This sets how hot the dish is as standard and doesn't change the price. Customers can still ask for a different level in their notes.
 - **Order on the page:** the **Order** box (under "Page Attributes") sets a dish's position within its section, lowest first.
 - **Sections:** use **Menu → Sections** to rename one, change the note beside its heading (e.g. "Served with salad & mint sauce"), set its **Order** on the page, or add a new one (e.g. Desserts). Empty sections are hidden.
@@ -82,15 +83,22 @@ Manage it in **WP Admin → Menu**. Your original menu was copied in the first t
 
 Price changes only apply to new orders; past orders keep the price they were placed at. If you use LiteSpeed Cache, the site refreshes itself after each menu change.
 
-### Testimonials
+### Reviews (WP Admin → Testimonials)
 
-Manage them in **WP Admin → Testimonials**:
+The page is called **Reviews** on the site.
+- **Reviews from customers:** customers can click **Leave a review** and fill in their name, area, a star rating and their review. Each one arrives in **WP Admin → Testimonials** marked **Waiting for approval**, and you get an email. A number on the Testimonials menu item shows how many are waiting.
+- **Approving:** open the review and click **Publish** to put it on the site, or **Bin** to delete it. Nothing goes live until you publish it.
+- **Adding your own:** click **Add testimonial**. Put the customer's name in the title box and the quote in the text box below, set **Rating** and **Order** (lowest shows first), then click **Publish**.
 
-- **Add testimonial:** put the customer's name in the title box (e.g. "Sarah, Tividale") and their quote in the text box underneath. You don't need to type quotation marks. Click **Publish**.
-- **Order:** the **Order** box on the right sets the position on the page, lowest first.
-- **Hide one:** switch it back to **Draft**, or move it to the **Bin**.
+### News timeline (WP Admin → News timeline)
 
-While none are published, the page shows a short "reviews coming soon" message and the **Leave us a review** button.
+The News page shows a timeline of milestones, newest first.
+- **Add an entry:** click **Add entry**. Give it a title and some text, set **Date on the timeline** (past dates are fine), and optionally add a **Photo**. Click **Publish**.
+- **Edit or remove:** click an entry to edit it. Switch it to **Draft** to hide it, or move it to the **Bin**.
+
+### Contact page & enquiries (WP Admin → Enquiries)
+
+The Contact page shows your phone, email, website, delivery hours and social links, plus a message form. Name and contact number are required. Every message is emailed to the address in **Settings → Ghar Masala → Send new orders to** and is also saved in **WP Admin → Enquiries**, so nothing gets lost.
 
 ## Rebuilding the zip
 
