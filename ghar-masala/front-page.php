@@ -178,10 +178,9 @@ $gm_signed_in = is_user_logged_in();
 				<div class="gm-key__cell">
 					<h4 class="gm-label">Spice levels</h4>
 					<div class="gm-spice">
-						<div><span class="gm-dots"><i class="on"></i><i></i><i></i><i></i></span>Slightly hot</div>
-						<div><span class="gm-dots"><i class="on"></i><i class="on"></i><i></i><i></i></span>Hot</div>
-						<div><span class="gm-dots gm-dots--600"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span>Madras — hot<span class="gm-muted">&nbsp;· 30p</span></div>
-						<div><span class="gm-dots gm-dots--700"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span>Vindaloo — hot<span class="gm-muted">&nbsp;· 30p</span></div>
+						<?php foreach ( gm_spice_levels() as $gm_level => $gm_spice ) : ?>
+							<div><?php echo gm_spice_dots( $gm_level ); // phpcs:ignore WordPress.Security.EscapeOutput -- fixed markup. ?><?php echo esc_html( $gm_spice['label'] ); ?><?php if ( $gm_spice['extra'] ) : ?><span class="gm-muted">&nbsp;· <?php echo esc_html( $gm_spice['extra'] ); ?></span><?php endif; ?></div>
+						<?php endforeach; ?>
 					</div>
 				</div>
 				<div class="gm-key__cell">
@@ -213,8 +212,10 @@ $gm_signed_in = is_user_logged_in();
 						<div class="gm-dish">
 							<span class="gm-dish__info">
 								<span class="gm-dish__name"><?php echo esc_html( $item['name'] ); ?></span>
-								<?php if ( ! empty( $item['rec'] ) || ! empty( $item['veg'] ) || ! empty( $item['adjustable'] ) ) : ?>
+								<?php $gm_dish_spice = gm_spice_levels()[ $item['spice'] ?? '' ] ?? null; ?>
+								<?php if ( ! empty( $item['rec'] ) || ! empty( $item['veg'] ) || ! empty( $item['adjustable'] ) || $gm_dish_spice ) : ?>
 									<span class="gm-dish__meta">
+										<?php if ( $gm_dish_spice ) : ?><span class="gm-dish__spice" title="Standard spice level: <?php echo esc_attr( $gm_dish_spice['label'] ); ?>"><?php echo gm_spice_dots( $item['spice'] ); // phpcs:ignore WordPress.Security.EscapeOutput -- fixed markup. ?><?php echo esc_html( $gm_dish_spice['short'] ); ?></span><?php endif; ?>
 										<?php if ( ! empty( $item['rec'] ) ) : ?><span class="gm-rec">Recommended</span><?php endif; ?>
 										<?php if ( ! empty( $item['veg'] ) ) : ?><span class="gm-veg gm-veg--sm" title="Vegetarian">V</span><?php endif; ?>
 										<?php if ( ! empty( $item['adjustable'] ) ) : ?><span class="gm-dish__adj">spice to order</span><?php endif; ?>

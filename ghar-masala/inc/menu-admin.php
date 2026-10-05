@@ -165,6 +165,7 @@ function gm_dish_item( WP_Post $dish ) {
 		'veg'             => (bool) get_post_meta( $dish->ID, '_gm_veg', true ),
 		'rec'             => (bool) get_post_meta( $dish->ID, '_gm_rec', true ),
 		'adjustable'      => (bool) get_post_meta( $dish->ID, '_gm_adjustable', true ),
+		'spice'           => (string) get_post_meta( $dish->ID, '_gm_spice', true ),
 		'allergens'       => is_array( $allergens ) ? $allergens : array(),
 		'no_allergen_row' => (bool) get_post_meta( $dish->ID, '_gm_no_allergen_row', true ),
 	);
@@ -244,13 +245,21 @@ add_filter( 'user_can_richedit', function ( $can ) {
 add_action( 'admin_head', function () {
 	if ( 'gm_dish' === get_post_type() ) {
 		remove_action( 'media_buttons', 'media_buttons' );
-		echo '<style>#postdivrich #content{height:120px}.gm-allergen-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px 18px}.gm-allergen-grid label{display:flex;justify-content:space-between;align-items:center;gap:8px}</style>';
+		echo '<style>#postdivrich #content{height:120px}.gm-spice-pick{display:flex;align-items:center;gap:8px;margin:0 0 6px}.gm-allergen-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px 18px}.gm-allergen-grid label{display:flex;justify-content:space-between;align-items:center;gap:8px}</style>';
+	}
+} );
+
+/** Spice squares in WP Admin, same colours as the site's key. */
+add_action( 'admin_head', function () {
+	$screen = get_current_screen();
+	if ( $screen && 'gm_dish' === $screen->post_type ) {
+		echo '<style>.gm-dots{display:inline-flex;gap:3px;vertical-align:middle}.gm-dots i{width:8px;height:8px;background:#e2ded5}.gm-dots i.on{background:#eda01e}.gm-dots--600 i.on{background:#cf8511}.gm-dots--700 i.on{background:#a1660b}</style>';
 	}
 } );
 
 add_action( 'add_meta_boxes_gm_dish', function () {
 	remove_meta_box( 'slugdiv', 'gm_dish', 'normal' );
-	add_meta_box( 'gm_dish_details', 'Price, section & badges', 'gm_render_dish_box', 'gm_dish', 'normal', 'high' );
+	add_meta_box( 'gm_dish_details', 'Price, section, spice & badges', 'gm_render_dish_box', 'gm_dish', 'normal', 'high' );
 	add_meta_box( 'gm_dish_allergens', 'Allergens', 'gm_render_allergen_box', 'gm_dish', 'normal', 'default' );
 } );
 
@@ -277,6 +286,15 @@ function gm_render_dish_box( $post ) {
 				<?php endforeach; ?>
 			</select>
 			<a href="<?php echo esc_url( admin_url( 'edit-tags.php?taxonomy=gm_section&post_type=gm_dish' ) ); ?>" style="margin-left:8px">Manage sections</a></td></tr>
+		<tr><th scope="row">Standard spice level</th>
+			<td>
+				<?php $gm_spice_now = (string) get_post_meta( $post->ID, '_gm_spice', true ); ?>
+				<label class="gm-spice-pick"><input type="radio" name="gm_spice" value="" <?php checked( $gm_spice_now, '' ); ?>> <span class="gm-dots"><i></i><i></i><i></i><i></i></span> Not spicy / not shown</label>
+				<?php foreach ( gm_spice_levels() as $gm_level => $gm_spice ) : ?>
+					<label class="gm-spice-pick"><input type="radio" name="gm_spice" value="<?php echo esc_attr( $gm_level ); ?>" <?php checked( $gm_spice_now, $gm_level ); ?>> <?php echo gm_spice_dots( $gm_level ); // phpcs:ignore WordPress.Security.EscapeOutput -- fixed markup. ?> <?php echo esc_html( $gm_spice['label'] ); ?></label>
+				<?php endforeach; ?>
+				<p class="description">How hot the dish is as standard, using the menu’s spice key. Shown as coloured squares next to the dish.</p>
+			</td></tr>
 		<tr><th scope="row">Badges</th>
 			<td>
 				<label><input type="checkbox" name="gm_veg" value="1" <?php checked( get_post_meta( $post->ID, '_gm_veg', true ) ); ?>> Vegetarian (V)</label><br>
@@ -315,6 +333,8 @@ add_action( 'save_post_gm_dish', function ( $id ) {
 	}
 	$price = isset( $_POST['gm_price'] ) ? max( 0, round( (float) wp_unslash( $_POST['gm_price'] ), 2 ) ) : 0;
 	update_post_meta( $id, '_gm_price', number_format( $price, 2, '.', '' ) );
+	$spice = isset( $_POST['gm_spice'] ) ? sanitize_key( $_POST['gm_spice'] ) : '';
+	update_post_meta( $id, '_gm_spice', isset( gm_spice_levels()[ $spice ] ) ? $spice : '' );
 	foreach ( array( 'veg', 'rec', 'adjustable', 'no_allergen_row' ) as $flag ) {
 		update_post_meta( $id, '_gm_' . $flag, empty( $_POST[ 'gm_' . $flag ] ) ? 0 : 1 );
 	}
@@ -342,6 +362,7 @@ add_filter( 'manage_gm_dish_posts_columns', function () {
 		'title'               => 'Dish',
 		'taxonomy-gm_section' => 'Section',
 		'gm_price'            => 'Price',
+		'gm_spice'            => 'Spice',
 		'gm_badges'           => 'Badges',
 		'gm_order'            => 'Order',
 	);
@@ -350,6 +371,11 @@ add_filter( 'manage_gm_dish_posts_columns', function () {
 add_action( 'manage_gm_dish_posts_custom_column', function ( $col, $id ) {
 	if ( 'gm_price' === $col ) {
 		echo esc_html( gm_money( (int) round( (float) get_post_meta( $id, '_gm_price', true ) * 100 ) ) );
+	} elseif ( 'gm_spice' === $col ) {
+		$level = get_post_meta( $id, '_gm_spice', true );
+		if ( isset( gm_spice_levels()[ $level ] ) ) {
+			echo gm_spice_dots( $level ) . ' ' . esc_html( gm_spice_levels()[ $level ]['short'] ); // phpcs:ignore WordPress.Security.EscapeOutput -- fixed markup.
+		}
 	} elseif ( 'gm_badges' === $col ) {
 		$badges = array();
 		foreach ( array( 'veg' => 'V', 'rec' => 'Recommended', 'adjustable' => 'Spice to order' ) as $flag => $label ) {

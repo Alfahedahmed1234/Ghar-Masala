@@ -90,6 +90,33 @@ function gm_menu_seed() {
 }
 
 /**
+ * Spice levels, as shown in the menu key. `dots` is how many of the four
+ * squares are filled; `shade` matches the key's colours.
+ */
+function gm_spice_levels() {
+	return array(
+		'slight'   => array( 'label' => 'Slightly hot', 'short' => 'Slightly hot', 'dots' => 1, 'shade' => '', 'extra' => '' ),
+		'hot'      => array( 'label' => 'Hot', 'short' => 'Hot', 'dots' => 2, 'shade' => '', 'extra' => '' ),
+		'madras'   => array( 'label' => 'Madras — hot', 'short' => 'Madras', 'dots' => 3, 'shade' => '600', 'extra' => '30p' ),
+		'vindaloo' => array( 'label' => 'Vindaloo — hot', 'short' => 'Vindaloo', 'dots' => 4, 'shade' => '700', 'extra' => '30p' ),
+	);
+}
+
+/** The four-square spice meter for a level key, e.g. gm_spice_dots( 'hot' ). */
+function gm_spice_dots( $level ) {
+	$levels = gm_spice_levels();
+	if ( ! isset( $levels[ $level ] ) ) {
+		return '';
+	}
+	$l    = $levels[ $level ];
+	$html = '<span class="gm-dots' . ( $l['shade'] ? ' gm-dots--' . $l['shade'] : '' ) . '" aria-hidden="true">';
+	for ( $i = 1; $i <= 4; $i++ ) {
+		$html .= $i <= $l['dots'] ? '<i class="on"></i>' : '<i></i>';
+	}
+	return $html . '</span>';
+}
+
+/**
  * The 14 declarable allergens, in table order.
  */
 function gm_allergen_cols() {

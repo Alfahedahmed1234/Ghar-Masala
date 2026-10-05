@@ -75,6 +75,7 @@ Manage it in **WP Admin → Menu**. Your original menu was copied in the first t
 - **Change a price or description:** go to **Menu → All dishes**, click the dish, edit it, then click **Update**.
 - **Add a dish:** click **Add dish**. Fill in the name (top box), the description (box below it), the **Price** and the **Section**. Tick any badges (Vegetarian, Recommended, "Spice to order"), set its **Allergens**, then click **Publish**.
 - **Take a dish off the menu:** switch it to **Draft** to hide it but keep it for later, or move it to the **Bin** to remove it. Customers can't order hidden dishes, even from an old basket or "Order again".
+- **Standard spice level:** in the dish's **Standard spice level** box, pick Slightly hot, Hot, Madras or Vindaloo, the same scale as the menu's Spice levels key, or "Not spicy / not shown". The dish then shows the matching coloured squares next to its name. This sets how hot the dish is as standard and doesn't change the price. Customers can still ask for a different level in their notes.
 - **Order on the page:** the **Order** box (under "Page Attributes") sets a dish's position within its section, lowest first.
 - **Sections:** use **Menu → Sections** to rename one, change the note beside its heading (e.g. "Served with salad & mint sauce"), set its **Order** on the page, or add a new one (e.g. Desserts). Empty sections are hidden.
 - **Allergens:** the allergen table is built automatically from each dish's Allergens box. Tick "Leave this dish out of the allergen table" for things like canned drinks.
