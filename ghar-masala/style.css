@@ -322,8 +322,10 @@ section[id], div[id] { scroll-margin-top: 88px; }
 /* ========================================================= Testimonials/news */
 
 .gm-quotes { margin-top: clamp(32px, 4vw, 52px); display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: clamp(24px, 3vw, 40px); }
-.gm-quotes__item { border-top: 2px solid var(--color-accent); padding-top: 16px; }
+.gm-quotes__item { border-top: 2px solid var(--color-accent); padding-top: 16px; margin: 0; }
 .gm-quotes__text { font-size: 19px; font-weight: 500; line-height: 1.5; margin: 0; color: color-mix(in srgb, var(--color-text) 82%, transparent); }
+.gm-quotes__text p { margin: 0 0 10px; }
+.gm-quotes__text p:last-child { margin-bottom: 0; }
 .gm-quotes__by { font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 600; margin: 14px 0 0; color: var(--ink-55); }
 
 .gm-news { border-top: 1px solid var(--color-divider); margin-top: clamp(30px, 4vw, 48px); }

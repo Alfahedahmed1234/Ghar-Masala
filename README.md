@@ -65,10 +65,19 @@ Discount codes are recorded but **not** taken off automatically. Adjust the bill
 | Colours and fonts | top of `ghar-masala/style.css` |
 | Logo | **Appearance → Customize → Site Identity → Logo**, or replace `assets/images/logo.png` |
 | News | publish ordinary **Posts**; the News page lists the latest ten |
+| Testimonials | **WP Admin → Testimonials** (see below) |
 
 You can make these edits in **Appearance → Theme File Editor**, or edit them in this repo and upload a new zip. Every dish needs a unique `id`. Do not reuse an old id for a different dish, because past orders and "Order again" refer to dishes by id.
 
-Testimonials are still the placeholders from the design. Replace them in `front-page.php` once real reviews come in.
+### Testimonials
+
+Manage them in **WP Admin → Testimonials**:
+
+- **Add testimonial:** put the customer's name in the title box (e.g. "Sarah, Tividale") and their quote in the text box underneath. You don't need to type quotation marks. Click **Publish**.
+- **Order:** the **Order** box on the right sets the position on the page, lowest first.
+- **Hide one:** switch it back to **Draft**, or move it to the **Bin**.
+
+While none are published, the page shows a short "reviews coming soon" message and the **Leave us a review** button.
 
 ## Rebuilding the zip
 

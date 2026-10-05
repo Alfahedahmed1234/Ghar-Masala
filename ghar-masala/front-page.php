@@ -86,15 +86,20 @@ $gm_signed_in = is_user_logged_in();
 <section class="gm-view" data-view="testimonials" hidden>
 	<div class="gm-wrap gm-page">
 		<h1 class="gm-title">Testimonials</h1>
-		<p class="gm-lede">Reviews from people who have ordered from Ghar Masala. This page is new — real reviews will replace these placeholders as they come in.</p>
-		<div class="gm-quotes">
-			<?php for ( $i = 0; $i < 3; $i++ ) : ?>
-				<div class="gm-quotes__item">
-					<p class="gm-quotes__text">"Add a customer quote here."</p>
-					<p class="gm-quotes__by">— Customer name</p>
-				</div>
-			<?php endfor; ?>
-		</div>
+		<?php $gm_testimonials = gm_testimonials(); ?>
+		<?php if ( $gm_testimonials ) : ?>
+			<p class="gm-lede">What people who have ordered from Ghar Masala say about the food.</p>
+			<div class="gm-quotes">
+				<?php foreach ( $gm_testimonials as $gm_t ) : ?>
+					<figure class="gm-quotes__item">
+						<blockquote class="gm-quotes__text"><?php echo wp_kses_post( wpautop( '“' . trim( trim( $gm_t->post_content ), '"“”' ) . '”' ) ); ?></blockquote>
+						<figcaption class="gm-quotes__by">— <?php echo esc_html( get_the_title( $gm_t ) ); ?></figcaption>
+					</figure>
+				<?php endforeach; ?>
+			</div>
+		<?php else : ?>
+			<p class="gm-lede">Reviews from people who have ordered from Ghar Masala will appear here soon. Ordered from us? We would love to hear what you thought.</p>
+		<?php endif; ?>
 		<div class="gm-cta-row">
 			<a class="gm-btn" href="https://wa.me/<?php echo esc_attr( gm_phone_intl() ); ?>" target="_blank" rel="noopener">Leave us a review</a>
 		</div>

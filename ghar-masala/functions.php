@@ -20,6 +20,7 @@ require get_template_directory() . '/inc/settings.php';
 require get_template_directory() . '/inc/orders.php';
 require get_template_directory() . '/inc/delivery.php';
 require get_template_directory() . '/inc/accounts.php';
+require get_template_directory() . '/inc/testimonials.php';
 require get_template_directory() . '/inc/stripe.php';
 require get_template_directory() . '/inc/rest.php';
 
