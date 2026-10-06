@@ -190,8 +190,22 @@ function gm_render_delivery_checker() {
 		</div>
 		<p class="gm-small gm-muted gm-checker__rules"><?php echo esc_html( gm_delivery_summary() ); ?></p>
 		<div class="gm-checker__result" data-gm-checker-result aria-live="polite" hidden></div>
-		<template data-gm-checker-out><?php echo esc_html( wp_strip_all_tags( gm_fill( gm_mod( 'checker_out' ) ) ) ); ?> <a href="<?php echo esc_url( gm_view_url( 'contact' ) ); ?>">Contact us</a></template>
+		<template data-gm-checker-out><?php echo esc_html( wp_strip_all_tags( gm_fill( gm_mod( 'checker_out' ) ) ) ); ?></template>
 	</form>
 	<?php
+}
+
+/** The delivery checker with the loyalty advert beside it (side by side, centred). */
+function gm_render_checker_and_promo( $where ) {
+	ob_start();
+	gm_render_delivery_checker();
+	$checker = trim( ob_get_clean() );
+	ob_start();
+	gm_render_loyalty_promo( $where );
+	$promo = trim( ob_get_clean() );
+	if ( ! $checker && ! $promo ) {
+		return;
+	}
+	echo '<div class="gm-duo' . ( $checker && $promo ? '' : ' gm-duo--single' ) . '">' . $checker . $promo . '</div>'; // phpcs:ignore -- both already escaped
 }
 

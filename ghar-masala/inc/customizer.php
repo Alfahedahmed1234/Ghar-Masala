@@ -27,7 +27,7 @@ function gm_mod_defaults() {
 		'welcome_first'    => 'Welcome, {name} — lovely to have you at Ghar Masala. Pull up a chair and have a look at the menu.',
 		'checker_show'     => 'show',
 		'checker_title'    => 'Do we deliver to you?',
-		'checker_out'      => 'We don’t usually deliver that far — but please get in touch, we may be able to arrange something. Ring {phone} or send us a message.',
+		'checker_out'      => 'We don’t usually deliver that far — but get in touch and we’ll see if we can arrange something.',
 		// My story
 		'story_title'      => '<strong>Ghar Masala</strong>… it means House of Spice.',
 		'img_story_wide'   => '',
@@ -76,7 +76,7 @@ Do you cater for allergies?
 Check the allergen table before you order and add a note at checkout — we will always talk it through with you.
 
 Do you have a loyalty scheme?
-Yes — create a free account and every order of £20 or more earns a stamp. Collect 10 and you get 50% off a later order.
+Yes — create a free account and every order of £20 or more earns a stamp. Your 10th order is 50% off (or save the reward for a later order).
 
 Can I change or cancel an order after paying?
 Ring the kitchen as soon as you can on {phone} — we can usually help if your slot has not started yet.',
@@ -195,7 +195,7 @@ add_action( 'customize_register', function ( WP_Customize_Manager $wp ) {
 	$text( 'welcome', 'welcome_first', 'Signed in, no orders yet', 'textarea', '{name} = first name.' );
 	$show( 'checker_show', 'Postcode delivery checker', 'Lets customers check their postcode on the home and menu pages before ordering.' );
 	$text( 'welcome', 'checker_title', 'Delivery checker heading' );
-	$text( 'welcome', 'checker_out', 'Message when we don’t deliver there', 'textarea', '{phone} = your phone number. A “Contact us” link is added after it.' );
+	$text( 'welcome', 'checker_out', 'Message when we don’t deliver there', 'textarea', 'Call and “Message us” buttons are added underneath.' );
 
 	$section( 'story', 'My story' );
 	$text( 'story', 'story_title', 'Title', 'text', 'Wrap words in <strong>…</strong> for bold.' );

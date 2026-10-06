@@ -353,7 +353,7 @@ function gm_create_order( array $data ) {
 
 	// Loyalty reward (signed-in customers with a full card who chose to use it).
 	$loyalty_used = false;
-	if ( ! empty( $data['use_loyalty'] ) && is_user_logged_in() && gm_loyalty()['enabled'] && gm_loyalty_status( get_current_user_id() )['ready'] ) {
+	if ( ! empty( $data['use_loyalty'] ) && is_user_logged_in() && gm_loyalty()['enabled'] && gm_loyalty_can_use( get_current_user_id(), $total - $off ) ) {
 		$loy = gm_loyalty_value( $total - $off );
 		if ( $loy > 0 ) {
 			$discount['lines'][] = array( 'label' => gm_loyalty_label(), 'pence' => $loy );
@@ -506,9 +506,12 @@ function gm_send_order_emails( $id ) {
 	$user_id = (int) $m( 'user' );
 	if ( $user_id && gm_loyalty()['enabled'] ) {
 		$st        = gm_loyalty_status( $user_id );
-		$customer .= $st['ready']
-			? 'Loyalty: you have ' . $st['stamps'] . ' stamps — your ' . gm_num( gm_loyalty()['percent'] ) . "% reward is ready to use on any order (or save it for later).\n\n"
-			: 'Loyalty: ' . $st['stamps'] . ' of ' . $st['needed'] . ' stamps. ' . ( $st['needed'] - $st['stamps'] ) . ' more to unlock ' . gm_num( gm_loyalty()['percent'] ) . "% off.\n\n";
+		$pct       = gm_num( gm_loyalty()['percent'] );
+		$customer .= $st['full']
+			? 'Loyalty: you have a saved ' . $pct . "% reward — use it on any order whenever you like.\n\n"
+			: ( $st['ready']
+				? 'Loyalty: ' . $st['stamps'] . ' of ' . $st['needed'] . ' stamps — your next order of £' . gm_num( gm_loyalty()['min'] ) . ' or more is ' . $pct . "% off!\n\n"
+				: 'Loyalty: ' . $st['stamps'] . ' of ' . $st['needed'] . ' stamps. ' . ( $st['needed'] - 1 - $st['stamps'] ) . ' more order(s), then your ' . $st['needed'] . gm_ordinal_suffix( $st['needed'] ) . ' is ' . $pct . "% off.\n\n" );
 	}
 	$rr        = gm_review_reward();
 	$customer .= 'Enjoyed it? We would love a review: ' . gm_view_url( 'write-review' ) . "\n"

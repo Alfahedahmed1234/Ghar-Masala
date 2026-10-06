@@ -14,3 +14,4 @@
 <?php wp_body_open(); ?>
 <a class="gm-skip" href="#gm-main">Skip to content</a>
 <?php gm_render_banners( 'top' ); ?>
+<?php if ( is_front_page() ) : ?><div class="gm-countdown" data-gm-countdown hidden></div><?php endif; ?>

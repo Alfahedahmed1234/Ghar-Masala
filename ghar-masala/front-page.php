@@ -31,14 +31,12 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 			<?php get_template_part( 'template-parts/nav', null, array( 'variant' => 'hero' ) ); ?>
 		</header>
 		<div class="gm-hero__body">
-			<div class="gm-welcome gm-welcome--hero" data-gm-welcome hidden></div>
 			<span class="gm-hero__kicker"><?php echo gm_line( 'home_kicker' ); // phpcs:ignore ?></span>
 			<h1 class="gm-hero__title"><?php echo gm_line( 'home_title' ); // phpcs:ignore ?></h1>
 			<div class="gm-hero__ctas">
 				<a class="gm-hero__cta gm-hero__cta--main" href="#menu">Order now</a>
 				<a class="gm-hero__cta" href="#how">How it works</a>
 			</div>
-			<div class="gm-countdown gm-countdown--hero" data-gm-countdown hidden></div>
 			<div class="gm-hero__facts">
 				<div><p class="gm-hero__fact"><?php echo esc_html( $gm_win ); ?> min</p><p class="gm-hero__fact-label">Delivery window</p></div>
 				<div><p class="gm-hero__fact">£10</p><p class="gm-hero__fact-label">Minimum spend</p></div>
@@ -47,8 +45,7 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 		</div>
 	</div>
 	<?php gm_render_banners( 'home' ); ?>
-	<div class="gm-wrap"><?php gm_render_delivery_checker(); ?></div>
-	<div class="gm-wrap"><?php gm_render_loyalty_promo( 'home' ); ?></div>
+	<div class="gm-wrap"><?php gm_render_checker_and_promo( 'home' ); ?></div>
 </section>
 
 <?php /* ===================================================== My story */ ?>
@@ -241,9 +238,7 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 		<h1 class="gm-title">Menu</h1>
 		<p class="gm-lede">Curries marked “spice to order” can be made as hot as you like — choose the spice level in your basket. Madras and Vindaloo are 30p extra.</p>
 
-		<div class="gm-welcome" data-gm-welcome hidden></div>
-		<div class="gm-countdown" data-gm-countdown data-gm-countdown-order hidden></div>
-		<?php gm_render_delivery_checker(); ?>
+		<?php gm_render_checker_and_promo( 'menu' ); ?>
 		<?php gm_render_banners( 'menu' ); ?>
 		<div class="gm-key">
 			<p class="gm-key__title">Menu key</p>
@@ -313,7 +308,6 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 
 	<div id="order" class="gm-order">
 		<div class="gm-wrap gm-order__inner">
-			<?php gm_render_loyalty_promo( 'menu' ); ?>
 			<h2 class="gm-subtitle">Your order</h2>
 			<div class="gm-order__grid">
 				<div>
@@ -634,7 +628,7 @@ if ( $gm_signed_in ) :
 						<label class="gm-loyalty-use" data-gm-loyalty-use>
 							<input type="checkbox" name="use_loyalty" value="1" checked data-gm-use-loyalty>
 							<span><strong>Use my <?php echo esc_html( gm_num( (float) gm_loyalty()['percent'] ) ); ?>% loyalty reward on this order</strong>
-							<small>Untick to save it for a later order — it won’t expire.</small></span>
+							<small data-gm-loyalty-note>Untick to save it for a bigger order — it won’t expire.</small></span>
 						</label>
 					<?php endif; ?>
 					<div class="gm-hp" aria-hidden="true"><label for="gm-website">Website</label><input id="gm-website" name="website" type="text" tabindex="-1" autocomplete="off"></div>
@@ -687,6 +681,8 @@ if ( $gm_signed_in ) :
 		<a class="gm-btn-outline gm-btn-outline--lg" href="#" data-gm-restart style="margin-top:32px">Back to the site</a>
 	</div>
 </section>
+
+<aside class="gm-welcome" data-gm-welcome role="status" hidden></aside>
 
 </main>
 

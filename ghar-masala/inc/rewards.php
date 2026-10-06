@@ -8,8 +8,8 @@
  *                       works on top of any other discount.
  *   Loyalty           – Customers → Loyalty programme. Every order with a food
  *                       total of £20+ (after other discounts) earns a stamp;
- *                       10 stamps unlock 50% off a later order. Customers can
- *                       use it or save it. Progress shows in My account and in
+ *                       the 10th order is 50% off. Customers can use it or
+ *                       save it for a later order. Progress shows in My account and in
  *                       Customers, where you can add or remove stamps.
  */
 
@@ -48,8 +48,8 @@ function gm_loyalty() {
 			'cap'        => 0,   // £ maximum saving, 0 = no limit.
 			'promo_home' => 1,
 			'promo_menu' => 1,
-			'promo_title' => 'Order 10 times, get 50% off',
-			'promo_text'  => 'Create a free Ghar Masala account and every order of £20 or more earns a stamp. Collect 10 stamps and you get 50% off your next order — use it straight away or save it for later.',
+			'promo_title' => 'Your 10th order is 50% off',
+			'promo_text'  => 'Create a free Ghar Masala account and every order of £20 or more earns a stamp — your 10th order is 50% off. Rather save it for a bigger order? You can.',
 		)
 	);
 }
@@ -165,15 +165,16 @@ function gm_loyalty_status( $user_id ) {
 			$stamps = max( 0, $stamps + $e[2] );
 			continue;
 		}
-		$id = $e[2];
+		$id   = $e[2];
+		$sub  = get_post_meta( $id, '_gm_subtotal', true );
+		$sub  = '' === $sub ? (int) get_post_meta( $id, '_gm_total', true ) : (int) $sub;
+		$food = $sub - (int) get_post_meta( $id, '_gm_discount_pence', true ); // before the loyalty reward
 		if ( get_post_meta( $id, '_gm_loyalty_used', true ) ) {
-			$stamps    = max( 0, $stamps - $needed );
+			// The reward order counts as the last stamp on the card (if it qualifies), then the card starts again.
+			$stamps    = max( 0, $stamps + ( $food >= $min ? 1 : 0 ) - $needed );
 			$history[] = array( gm_order_ref( $id ), get_the_date( 'j M Y', $id ), 'used' );
 			continue;
 		}
-		$sub  = get_post_meta( $id, '_gm_subtotal', true );
-		$sub  = '' === $sub ? (int) get_post_meta( $id, '_gm_total', true ) : (int) $sub;
-		$food = $sub - (int) get_post_meta( $id, '_gm_discount_pence', true );
 		if ( $food >= $min ) {
 			$stamps++;
 			$history[] = array( gm_order_ref( $id ), get_the_date( 'j M Y', $id ), 'earned' );
@@ -184,7 +185,8 @@ function gm_loyalty_status( $user_id ) {
 	return array(
 		'stamps'  => $stamps,
 		'needed'  => $needed,
-		'ready'   => $l['enabled'] && $stamps >= $needed,
+		'ready'   => $l['enabled'] && $stamps >= $needed - 1, // the next qualifying order is the reward order
+		'full'    => $l['enabled'] && $stamps >= $needed,     // saved: any order can use it
 		'adjust'  => $adjust,
 		'history' => array_reverse( $history ),
 	);
@@ -217,13 +219,22 @@ function gm_loyalty_config() {
 		'percent' => (float) $l['percent'],
 		'cap'     => (int) round( (float) $l['cap'] * 100 ),
 		'label'   => gm_loyalty_label(),
+		'min'     => (int) round( (float) $l['min'] * 100 ),
 		'ready'   => false,
+		'full'    => false,
 	);
 	if ( is_user_logged_in() ) {
 		$st           = gm_loyalty_status( get_current_user_id() );
 		$out['ready'] = $st['ready'];
+		$out['full']  = $st['full'];
 	}
 	return $out;
+}
+
+/** Can this customer use the reward on an order with this food total (pence, after other discounts)? */
+function gm_loyalty_can_use( $user_id, $food ) {
+	$st = gm_loyalty_status( $user_id );
+	return $st['full'] || ( $st['ready'] && $food >= (int) round( (float) gm_loyalty()['min'] * 100 ) );
 }
 
 /** The loyalty saving on a food total (pence), after other discounts. */
@@ -234,6 +245,14 @@ function gm_loyalty_value( $food ) {
 		$v = min( $v, (int) round( (float) $l['cap'] * 100 ) );
 	}
 	return max( 0, min( $v, $food ) );
+}
+
+function gm_ordinal_suffix( $n ) {
+	$n = (int) $n;
+	if ( in_array( $n % 100, array( 11, 12, 13 ), true ) ) {
+		return 'th';
+	}
+	return array( 'th', 'st', 'nd', 'rd' )[ $n % 10 ] ?? 'th';
 }
 
 function gm_loyalty_label() {
@@ -268,15 +287,18 @@ function gm_render_loyalty_card( $user_id ) {
 		<?php if ( $needed <= 20 ) : ?>
 			<ol class="gm-loyalty__stamps" aria-hidden="true">
 				<?php for ( $i = 1; $i <= $needed; $i++ ) : ?>
-					<li class="<?php echo $i <= $have ? 'is-on' : ''; ?><?php echo $i === $needed ? ' is-prize' : ''; ?>"><?php echo $i === $needed ? esc_html( $pct . '%' ) : ( $i <= $have ? '✓' : (int) $i ); ?></li>
+					<li class="<?php echo $i <= $have ? 'is-on' : ''; ?><?php echo $i === $needed ? ' is-prize' : ''; ?><?php echo $i === $needed && $st['ready'] ? ' is-next' : ''; ?>"><?php echo $i === $needed ? esc_html( $pct . '%' ) : ( $i <= $have ? '✓' : (int) $i ); ?></li>
 				<?php endfor; ?>
 			</ol>
 		<?php endif; ?>
-		<?php if ( $st['ready'] ) : ?>
-			<p class="gm-loyalty__msg"><strong>Your <?php echo esc_html( $pct ); ?>% reward is ready!</strong> It’s offered at checkout on your next order — use it then, or untick it to save it for a bigger order. It won’t expire.<?php echo $st['stamps'] > $needed ? esc_html( sprintf( ' You also have %d stamp%s towards your next card.', $st['stamps'] - $needed, 1 === $st['stamps'] - $needed ? '' : 's' ) ) : ''; ?></p>
+		<?php if ( $st['full'] ) : ?>
+			<p class="gm-loyalty__msg"><strong>You’ve saved a <?php echo esc_html( $pct ); ?>% reward!</strong> It’s offered at checkout on any order — use it whenever you like. It won’t expire.<?php echo $st['stamps'] > $needed ? esc_html( sprintf( ' You also have %d stamp%s towards your next card.', $st['stamps'] - $needed, 1 === $st['stamps'] - $needed ? '' : 's' ) ) : ''; ?></p>
 			<a class="gm-btn" href="#menu">Order with my reward</a>
+		<?php elseif ( $st['ready'] ) : ?>
+			<p class="gm-loyalty__msg"><strong>Your next order is your <?php echo esc_html( $needed . gm_ordinal_suffix( $needed ) ); ?> — and it’s <?php echo esc_html( $pct ); ?>% off!</strong> It applies at checkout to any order of £<?php echo esc_html( gm_num( $l['min'] ) ); ?> or more. Rather save it for a bigger order? Just untick it at checkout.</p>
+			<a class="gm-btn" href="#menu">Order my <?php echo esc_html( $pct ); ?>% off meal</a>
 		<?php else : ?>
-			<p class="gm-loyalty__msg"><?php echo esc_html( sprintf( '%d more order%s of £%s or more to unlock %s%% off.', $needed - $have, 1 === $needed - $have ? '' : 's', gm_num( $l['min'] ), $pct ) ); ?></p>
+			<p class="gm-loyalty__msg"><?php echo esc_html( sprintf( '%d more order%s of £%s or more, then your %s order is %s%% off.', $needed - 1 - $have, 1 === $needed - 1 - $have ? '' : 's', gm_num( $l['min'] ), $needed . gm_ordinal_suffix( $needed ), $pct ) ); ?></p>
 		<?php endif; ?>
 		<?php if ( $st['history'] ) : ?>
 			<details class="gm-loyalty__history">
@@ -348,12 +370,12 @@ function gm_render_loyalty_settings() {
 	?>
 	<div class="wrap">
 		<h1>Loyalty programme</h1>
-		<p>Registered customers collect a stamp for every qualifying order. When their card is full they get a discount on a later order — they can use it straight away or save it. Progress shows on their <strong>My account</strong> page and in <a href="<?php echo esc_url( admin_url( 'admin.php?page=gm-customers' ) ); ?>">Customers</a>.</p>
+		<p>Registered customers collect a stamp for every qualifying order. The order that completes the card gets the discount (e.g. the 10th order is 50% off), as long as it meets the minimum spend. Customers can untick it at checkout to save it, and then use it on any later order. Progress shows on their <strong>My account</strong> page and in <a href="<?php echo esc_url( admin_url( 'admin.php?page=gm-customers' ) ); ?>">Customers</a>.</p>
 		<form method="post">
 			<?php wp_nonce_field( 'gm_loyalty', 'gm_loyalty_nonce' ); ?>
 			<table class="form-table" role="presentation">
 				<tr><th scope="row">Programme</th><td><label><input type="checkbox" name="enabled" value="1" <?php checked( $l['enabled'] ); ?>> Switch the loyalty programme on</label></td></tr>
-				<tr><th scope="row"><label for="gm-l-orders">Orders needed</label></th><td><input type="number" id="gm-l-orders" name="orders" min="1" max="50" value="<?php echo (int) $l['orders']; ?>" style="width:6em"> stamps to fill the card</td></tr>
+				<tr><th scope="row"><label for="gm-l-orders">Orders needed</label></th><td><input type="number" id="gm-l-orders" name="orders" min="1" max="50" value="<?php echo (int) $l['orders']; ?>" style="width:6em"> <span class="description">the last one is the reward order, e.g. 10 = the 10th order gets the discount</span></td></tr>
 				<tr><th scope="row"><label for="gm-l-min">Order must be at least</label></th><td>£ <input type="number" id="gm-l-min" name="min" min="0" step="0.01" value="<?php echo esc_attr( $l['min'] ); ?>" style="width:7em"> <span class="description">food total after any discounts, to earn a stamp</span></td></tr>
 				<tr><th scope="row"><label for="gm-l-pct">Reward</label></th><td><input type="number" id="gm-l-pct" name="percent" min="1" max="100" step="0.5" value="<?php echo esc_attr( $l['percent'] ); ?>" style="width:6em"> % off the food total of the order they use it on</td></tr>
 				<tr><th scope="row"><label for="gm-l-cap">Biggest saving</label></th><td>£ <input type="number" id="gm-l-cap" name="cap" min="0" step="0.01" value="<?php echo esc_attr( $l['cap'] ); ?>" style="width:7em"> <span class="description">optional limit on the reward, 0 = no limit</span></td></tr>
@@ -361,8 +383,8 @@ function gm_render_loyalty_settings() {
 			<h2>Advert on the website</h2>
 			<table class="form-table" role="presentation">
 				<tr><th scope="row">Show it</th><td>
-					<label style="display:block"><input type="checkbox" name="promo_home" value="1" <?php checked( $l['promo_home'] ); ?>> Home page</label>
-					<label style="display:block"><input type="checkbox" name="promo_menu" value="1" <?php checked( $l['promo_menu'] ); ?>> Menu page (above “Your order”)</label>
+					<label style="display:block"><input type="checkbox" name="promo_home" value="1" <?php checked( $l['promo_home'] ); ?>> Home page (next to the delivery checker)</label>
+					<label style="display:block"><input type="checkbox" name="promo_menu" value="1" <?php checked( $l['promo_menu'] ); ?>> Menu page (next to the delivery checker)</label>
 					<p class="description">It always appears on the Sign in / Create account page while the programme is on.</p></td></tr>
 				<tr><th scope="row"><label for="gm-l-title">Headline</label></th><td><input type="text" id="gm-l-title" name="promo_title" value="<?php echo esc_attr( $l['promo_title'] ); ?>" class="regular-text"></td></tr>
 				<tr><th scope="row"><label for="gm-l-text">Text</label></th><td><textarea id="gm-l-text" name="promo_text" rows="3" class="large-text"><?php echo esc_textarea( $l['promo_text'] ); ?></textarea>

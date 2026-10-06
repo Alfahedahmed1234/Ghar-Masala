@@ -141,8 +141,9 @@
 		out.pence = Math.min(out.pence, sub);
 		// Loyalty reward: a % off what's left of the food total, on top of everything else.
 		var L = C.loyalty;
-		if (L && L.ready && state.useLoyalty) {
-			var food = sub - out.pence;
+		var food = sub - out.pence;
+		out.loyaltyShort = L && L.ready && !L.full && food < L.min ? L.min - food : 0; // 10th order must still qualify
+		if (L && L.ready && state.useLoyalty && !out.loyaltyShort) {
 			var v = Math.round(food * L.percent / 100);
 			if (L.cap > 0) v = Math.min(v, L.cap);
 			v = Math.max(0, Math.min(v, food));
@@ -407,15 +408,14 @@
 		var text = esc(C.countdown).replace('{next}', '<strong>' + esc(next.long) + '</strong>');
 		boxes.forEach(function (b) {
 			b.innerHTML = '<span class="gm-countdown__text">' + text + '</span> <span class="gm-countdown__timer gm-tnum" data-gm-timer aria-live="off"></span>' +
-				'<a class="gm-countdown__cta" href="' + (b.hasAttribute('data-gm-countdown-order') ? '#order' : '#menu') + '">Order now</a>';
+				'<a class="gm-countdown__cta" href="#menu">Order now</a>';
 			b.hidden = false;
 		});
 		var tick = function () {
 			var left = Math.max(0, Math.floor(next.deadline - Date.now() / 1000));
 			if (!left) { clearInterval(countdownTimer); loadSlots(true); return; }
 			var d = Math.floor(left / 86400), h = Math.floor(left % 86400 / 3600), m = Math.floor(left % 3600 / 60), sec = left % 60;
-			var html = (d ? '<b>' + d + '</b><i>' + (d === 1 ? 'day' : 'days') + '</i>' : '') +
-				'<b>' + pad(h) + '</b><i>hrs</i><b>' + pad(m) + '</b><i>min</i><b>' + pad(sec) + '</b><i>sec</i>';
+			var html = (d ? '<b>' + d + '</b>d ' : '') + '<b>' + pad(h) + '</b>h <b>' + pad(m) + '</b>m <b>' + pad(sec) + '</b>s';
 			$$('[data-gm-timer]').forEach(function (t) { t.innerHTML = html; });
 		};
 		tick();
@@ -457,9 +457,11 @@
 						(inMenu ? '' : ' <a class="gm-checker__go" href="#menu">Start your order →</a>'));
 				} else if (res.ok) {
 					var out = $('[data-gm-checker-out]', form);
-					var extra = out ? out.innerHTML : '';
-					if (C.phone && C.phone.label) extra = extra.split(esc(C.phone.label)).join('<a href="' + esc(C.phone.href) + '">' + esc(C.phone.label) + '</a>');
-					checkerResult(form, 'out', '<strong>' + esc(b.message) + '</strong><br>' + extra);
+					var note = out ? out.innerHTML.trim() : '';
+					checkerResult(form, 'out', '<strong>' + esc(b.message) + '</strong>' + (note ? '<br>' + note : '') +
+						'<span class="gm-checker__actions">' +
+						(C.phone && C.phone.label ? '<a class="gm-checker__act" href="' + esc(C.phone.href) + '">📞 ' + esc(C.phone.label) + '</a>' : '') +
+						'<a class="gm-checker__act" href="#contact">Message us</a></span>');
 				} else {
 					checkerResult(form, 'bad', esc(b.message || 'We could not find that postcode — please check it.'));
 				}
@@ -545,9 +547,22 @@
 			.replace(/\{name\}/g, '<strong>' + esc(first) + '</strong>')
 			.replace(/\{dish\}/g, last && last.lines ? esc(dishText(last.lines)) : 'meal')
 			.replace(/\{date\}/g, last && last.date ? esc(last.date) : 'your delivery day');
+		var key = 'gm_welcome_closed';
+		var sig = String(tpl.length) + ':' + (last ? (last.ref || last.slot_date || '') : 'new') + ':' + first;
+		try { if (localStorage.getItem(key) === sig) return; } catch (e) {} // closed until there's news (a new order)
 		boxes.forEach(function (b) {
-			b.innerHTML = '<span class="gm-welcome__icon" aria-hidden="true">👋</span><p>' + msg + '</p>' + reorder;
-			b.hidden = false;
+			b.innerHTML = '<button type="button" class="gm-welcome__close" data-gm-welcome-close aria-label="Close this message">×</button>' +
+				'<p><span class="gm-welcome__icon" aria-hidden="true">👋</span> ' + msg + '</p>' + reorder;
+			setTimeout(function () {
+				b.hidden = false;
+				requestAnimationFrame(function () { b.classList.add('is-in'); });
+			}, 1200);
+			b.addEventListener('click', function (e) {
+				if (!e.target.closest('[data-gm-welcome-close],[data-gm-reorder]')) return;
+				b.classList.remove('is-in');
+				setTimeout(function () { b.hidden = true; }, 250);
+				try { localStorage.setItem(key, sig); } catch (err) {}
+			});
 		});
 	}
 
@@ -779,6 +794,13 @@
 			'<div class="gm-sum gm-sum--total"><span>Total</span><span class="gm-tnum">' + money(orderTotal()) + '</span></div>' +
 			(disc.note ? '<p class="gm-small gm-muted" style="margin:8px 0 0">' + esc(disc.note) + '</p>' : '');
 		renderCodeMsg();
+		var loyNote = $('[data-gm-loyalty-note]');
+		if (loyNote) {
+			loyNote.textContent = disc.loyaltyShort
+				? 'Your reward applies to a food total of ' + money(C.loyalty.min) + ' or more — add ' + money(disc.loyaltyShort) + ' more to use it.'
+				: (C.loyalty.full ? 'Untick to keep saving it for a later order — it won’t expire.' : 'Untick to save it for a bigger order — it won’t expire.');
+			loyNote.classList.toggle('gm-warn', !!disc.loyaltyShort);
+		}
 
 		var msg = $('[data-gm-postcode-msg]');
 		var text = {
@@ -837,7 +859,7 @@
 		}
 
 		var payload = { items: state.cart, spice: state.spice, date: state.slot.date, time: state.slot.time, payment: payMethod() };
-		payload.use_loyalty = !!(C.loyalty && C.loyalty.ready && state.useLoyalty);
+		payload.use_loyalty = !!(C.loyalty && C.loyalty.ready && state.useLoyalty && !discounts(subtotal()).loyaltyShort);
 		['name', 'email', 'address', 'postcode', 'phone', 'instructions', 'discount', 'website'].forEach(function (k) {
 			payload[k] = form.elements[k] ? form.elements[k].value.trim() : '';
 		});

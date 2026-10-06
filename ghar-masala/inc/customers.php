@@ -111,7 +111,7 @@ function gm_render_customers_page() {
 					if ( gm_loyalty()['enabled'] ) {
 						$st  = gm_loyalty_status( $user->ID );
 						$pct = min( 100, round( $st['stamps'] / $st['needed'] * 100 ) );
-						printf( '<strong>%d / %d</strong> stamps%s', (int) min( $st['stamps'], 999 ), (int) $st['needed'], $st['ready'] ? ' <span style="background:#00a32a;color:#fff;padding:1px 6px;border-radius:3px;font-size:11px">Reward ready</span>' : '' );
+						printf( '<strong>%d / %d</strong> stamps%s', (int) min( $st['stamps'], 999 ), (int) $st['needed'], $st['full'] ? ' <span style="background:#00a32a;color:#fff;padding:1px 6px;border-radius:3px;font-size:11px">Reward saved</span>' : ( $st['ready'] ? ' <span style="background:#00a32a;color:#fff;padding:1px 6px;border-radius:3px;font-size:11px">Next order ' . esc_html( gm_num( gm_loyalty()['percent'] ) ) . '% off</span>' : '' ) );
 						printf( '<div style="height:6px;background:#dcdcde;margin:5px 0"><div style="height:6px;width:%d%%;background:#eda01e"></div></div>', (int) $pct );
 						$adj = function ( $d ) use ( $user ) {
 							return wp_nonce_url( admin_url( 'admin-post.php?action=gm_loyalty_adjust&user=' . $user->ID . '&delta=' . $d ), 'gm_loyalty_adjust_' . $user->ID );
