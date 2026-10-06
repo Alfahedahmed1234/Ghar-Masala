@@ -96,6 +96,30 @@ function gm_banner( $post ) {
 	);
 }
 
+/** The discount (any status) that uses a code, or 0. */
+function gm_discount_id_for_code( $code ) {
+	$code = strtoupper( trim( (string) $code ) );
+	if ( '' === $code ) {
+		return 0;
+	}
+	$ids = get_posts(
+		array(
+			'post_type'      => 'gm_discount',
+			'post_status'    => array( 'publish', 'draft', 'pending', 'future', 'private' ),
+			'posts_per_page' => 1,
+			'fields'         => 'ids',
+			'no_found_rows'  => true,
+			'meta_query'     => array( array( 'key' => '_gm_code', 'value' => $code ) ),
+		)
+	);
+	return $ids ? (int) $ids[0] : 0;
+}
+
+/** Can a code be used today? (published, not expired, not used up) */
+function gm_code_is_live( $code ) {
+	return (bool) gm_find_discount_code( $code );
+}
+
 /** Published banners for one place whose dates include today. */
 function gm_banners_for( $place ) {
 	$today = gm_now()->format( 'Y-m-d' );
@@ -115,6 +139,9 @@ function gm_banners_for( $place ) {
 		}
 		if ( ( $b['start'] && $b['start'] > $today ) || ( $b['end'] && $b['end'] < $today ) ) {
 			continue;
+		}
+		if ( $b['code'] && ! gm_code_is_live( $b['code'] ) ) {
+			continue; // the discount is off, expired or used up — don't advertise it
 		}
 		$out[] = $b;
 	}
@@ -249,9 +276,21 @@ function gm_render_banner_box( $post ) {
 		<tr><th scope="row"><label for="gm-b-msg">Message</label></th>
 			<td><input type="text" id="gm-b-msg" name="gm_message" value="<?php echo esc_attr( $b['message'] ); ?>" class="large-text" maxlength="160" placeholder="e.g. 10% off your first order this week!" required>
 			<p class="description">Keep it short — one line reads best on phones.</p></td></tr>
+		<?php
+		$gm_did = gm_discount_id_for_code( $b['code'] );
+		$gm_d   = $gm_did ? gm_discount_rule( $gm_did ) : null;
+		$gm_amt = $gm_d ? ( 'fixed' === $gm_d['type'] ? $gm_d['amount'] / 100 : $gm_d['amount'] ) : '';
+		?>
 		<tr><th scope="row"><label for="gm-b-code">Discount code</label></th>
-			<td><input type="text" id="gm-b-code" name="gm_code" value="<?php echo esc_attr( $b['code'] ); ?>" style="text-transform:uppercase;width:14em" placeholder="Optional, e.g. WELCOME10">
-			<p class="description">Shown with a “Copy” button. Set the code itself up in <a href="<?php echo esc_url( admin_url( 'edit.php?post_type=gm_discount' ) ); ?>">Discounts</a>.</p></td></tr>
+			<td><input type="text" id="gm-b-code" name="gm_code" value="<?php echo esc_attr( $b['code'] ); ?>" style="text-transform:uppercase;width:14em" placeholder="Optional, e.g. WELCOME10" oninput="document.getElementById('gm-b-disc').style.display=this.value.trim()?'':'none'">
+			<p class="description">Shown with a “Copy” button. The discount is set up for you in <a href="<?php echo esc_url( admin_url( 'edit.php?post_type=gm_discount' ) ); ?>">Discounts</a> — no need to add it twice.<?php if ( $gm_d ) : ?> Linked to <a href="<?php echo esc_url( get_edit_post_link( $gm_did ) ); ?>"><?php echo esc_html( $gm_d['label'] ? $gm_d['label'] : $gm_d['code'] ); ?></a><?php echo $gm_d['active'] ? '' : ' <strong>(switched off)</strong>'; ?>, used <?php echo (int) $gm_d['used']; ?> time<?php echo 1 === (int) $gm_d['used'] ? '' : 's'; ?>.<?php endif; ?></p>
+			<div id="gm-b-disc" style="margin-top:10px;padding:10px 12px;background:#f6f7f7;border:1px solid #dcdcde;<?php echo $b['code'] ? '' : 'display:none'; ?>">
+				<label>Discount <input type="number" name="gm_d_amount" min="0" step="0.01" value="<?php echo esc_attr( $gm_amt ); ?>" style="width:6em" placeholder="10"></label>
+				<select name="gm_d_type" aria-label="Discount type"><option value="percent" <?php selected( $gm_d ? $gm_d['type'] : 'percent', 'percent' ); ?>>% off</option><option value="fixed" <?php selected( $gm_d ? $gm_d['type'] : '', 'fixed' ); ?>>£ off</option></select>
+				&nbsp; <label>Minimum spend £<input type="number" name="gm_d_min" min="0" step="0.01" value="<?php echo esc_attr( $gm_d ? $gm_d['min'] / 100 : 0 ); ?>" style="width:6em"></label>
+				&nbsp; <label>Use limit <input type="number" name="gm_d_limit" min="0" step="1" value="<?php echo esc_attr( $gm_d ? $gm_d['limit'] : 0 ); ?>" style="width:5em"></label>
+				<p class="description" style="margin-top:6px">Changing these updates the discount in Discounts. Use limit 0 = unlimited. The code stops working the day after the banner's “until” date. If the discount is switched off, expires or is used up, this banner hides itself.</p>
+			</div></td></tr>
 		<tr><th scope="row"><label for="gm-b-link">Button</label></th>
 			<td><select id="gm-b-link" name="gm_link" onchange="document.getElementById('gm-b-url-row').style.display=this.value==='custom'?'':'none'">
 				<?php foreach ( gm_banner_links() as $k => $label ) : ?><option value="<?php echo esc_attr( $k ); ?>" <?php selected( $b['link'], $k ); ?>><?php echo esc_html( $label ); ?></option><?php endforeach; ?>
@@ -295,8 +334,53 @@ add_action( 'save_post_gm_banner', function ( $id ) {
 	update_post_meta( $id, '_gm_start', $date( $in['gm_start'] ?? '' ) );
 	update_post_meta( $id, '_gm_end', $date( $in['gm_end'] ?? '' ) );
 	update_post_meta( $id, '_gm_dismissible', empty( $in['gm_dismissible'] ) ? 0 : 1 );
+	gm_banner_sync_discount( $id, $in );
 	do_action( 'litespeed_purge_all' );
 } );
+
+/**
+ * A banner's code is the discount: create it in Discounts if it is new, or
+ * update the existing one with the amount, minimum spend, limit and end date.
+ */
+function gm_banner_sync_discount( $banner_id, array $in ) {
+	$code = (string) get_post_meta( $banner_id, '_gm_code', true );
+	if ( '' === $code || ! current_user_can( 'edit_posts' ) ) {
+		return;
+	}
+	$type = 'fixed' === ( $in['gm_d_type'] ?? '' ) ? 'fixed' : 'percent';
+	$amt  = max( 0, round( (float) ( $in['gm_d_amount'] ?? 0 ), 2 ) );
+	$amt  = 'percent' === $type ? min( 100, $amt ) : $amt;
+	$id   = gm_discount_id_for_code( $code );
+	if ( ! $id ) {
+		if ( $amt <= 0 ) {
+			return; // nothing to create without an amount
+		}
+		$id = wp_insert_post(
+			array(
+				'post_type'   => 'gm_discount',
+				'post_status' => 'publish',
+				'post_title'  => ( 'fixed' === $type ? '£' . number_format( $amt, 2 ) : gm_num( $amt ) . '%' ) . ' off with ' . $code,
+			)
+		);
+		if ( ! $id || is_wp_error( $id ) ) {
+			return;
+		}
+		update_post_meta( $id, '_gm_kind', 'code' );
+		update_post_meta( $id, '_gm_code', $code );
+		update_post_meta( $id, '_gm_used', 0 );
+	}
+	if ( $amt > 0 ) {
+		update_post_meta( $id, '_gm_type', $type );
+		update_post_meta( $id, '_gm_amount', $amt );
+	}
+	update_post_meta( $id, '_gm_min_spend', max( 0, round( (float) ( $in['gm_d_min'] ?? 0 ), 2 ) ) );
+	update_post_meta( $id, '_gm_limit', max( 0, (int) ( $in['gm_d_limit'] ?? 0 ) ) );
+	$end = (string) get_post_meta( $banner_id, '_gm_end', true );
+	if ( $end ) {
+		update_post_meta( $id, '_gm_expires', $end );
+	}
+	update_post_meta( $id, '_gm_banner', $banner_id );
+}
 
 add_filter( 'manage_gm_banner_posts_columns', function () {
 	return array(

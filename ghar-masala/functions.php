@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'GM_VERSION', '1.10.0' );
+define( 'GM_VERSION', '1.11.0' );
 
 /** Cache-busting version: changes whenever the file does. */
 function gm_ver( $file ) {
@@ -23,6 +23,8 @@ require get_template_directory() . '/inc/schedule.php';
 require get_template_directory() . '/inc/discounts.php';
 require get_template_directory() . '/inc/customers.php';
 require get_template_directory() . '/inc/banners.php';
+require get_template_directory() . '/inc/rewards.php';
+require get_template_directory() . '/inc/customizer.php';
 require get_template_directory() . '/inc/delivery.php';
 require get_template_directory() . '/inc/accounts.php';
 require get_template_directory() . '/inc/testimonials.php';
@@ -96,6 +98,14 @@ add_action( 'wp_enqueue_scripts', function () {
 		'deliveryRules' => gm_delivery_summary(),
 		'cutoffText'    => gm_cutoff_text(),
 		'cashLimit'     => gm_cash_limit(),
+		'loyalty'       => gm_loyalty_config(),
+		'countdown'     => 'show' === gm_mod( 'countdown_show' ) ? gm_fill( wp_strip_all_tags( gm_mod( 'countdown_text' ) ) ) : '',
+		'welcome'       => 'show' === gm_mod( 'welcome_show' ) ? array(
+			'back'     => gm_fill( wp_strip_all_tags( gm_mod( 'welcome_back' ) ) ),
+			'upcoming' => gm_fill( wp_strip_all_tags( gm_mod( 'welcome_upcoming' ) ) ),
+			'first'    => gm_fill( wp_strip_all_tags( gm_mod( 'welcome_first' ) ) ),
+		) : null,
+		'reviewReward'  => gm_review_reward()['enabled'] ? (float) gm_review_reward()['percent'] : 0,
 		'discounts'     => array(
 			'auto'  => array_map( 'gm_discount_public', gm_discount_rules( 'auto' ) ),
 			'stack' => gm_discount_stacking(),

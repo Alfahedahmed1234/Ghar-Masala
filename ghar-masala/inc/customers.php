@@ -80,11 +80,11 @@ function gm_render_customers_page() {
 		</form>
 		<table class="wp-list-table widefat fixed striped">
 			<thead><tr>
-				<th style="width:20%">Customer</th><th style="width:18%">Contact &amp; address</th><th>Joined</th><th>Orders</th><th>Spent</th><th>Last order</th><th style="width:24%">Actions</th>
+				<th style="width:20%">Customer</th><th style="width:18%">Contact &amp; address</th><th>Joined</th><th>Orders</th><th>Spent</th><th>Last order</th><th style="width:15%">Loyalty</th><th style="width:22%">Actions</th>
 			</tr></thead>
 			<tbody>
 			<?php if ( ! $query->get_results() ) : ?>
-				<tr><td colspan="7"><?php echo $search ? 'No customers match that search.' : 'No customer accounts yet. Customers appear here when they create an account on the website.'; ?></td></tr>
+				<tr><td colspan="8"><?php echo $search ? 'No customers match that search.' : 'No customer accounts yet. Customers appear here when they create an account on the website.'; ?></td></tr>
 			<?php endif; ?>
 			<?php
 			foreach ( $query->get_results() as $user ) :
@@ -107,6 +107,20 @@ function gm_render_customers_page() {
 					<td><?php echo (int) $count; ?></td>
 					<td><?php echo esc_html( gm_money( $spent ) ); ?></td>
 					<td><?php echo $last ? esc_html( date_i18n( 'j M Y', strtotime( $last ) ) ) : '—'; ?></td>
+					<td><?php
+					if ( gm_loyalty()['enabled'] ) {
+						$st  = gm_loyalty_status( $user->ID );
+						$pct = min( 100, round( $st['stamps'] / $st['needed'] * 100 ) );
+						printf( '<strong>%d / %d</strong> stamps%s', (int) min( $st['stamps'], 999 ), (int) $st['needed'], $st['ready'] ? ' <span style="background:#00a32a;color:#fff;padding:1px 6px;border-radius:3px;font-size:11px">Reward ready</span>' : '' );
+						printf( '<div style="height:6px;background:#dcdcde;margin:5px 0"><div style="height:6px;width:%d%%;background:#eda01e"></div></div>', (int) $pct );
+						$adj = function ( $d ) use ( $user ) {
+							return wp_nonce_url( admin_url( 'admin-post.php?action=gm_loyalty_adjust&user=' . $user->ID . '&delta=' . $d ), 'gm_loyalty_adjust_' . $user->ID );
+						};
+						printf( '<a href="%s" title="Take a stamp away">−1</a> · <a href="%s" title="Give a stamp">+1</a>%s', esc_url( $adj( '-1' ) ), esc_url( $adj( '1' ) ), $st['adjust'] ? ' <span style="color:#787c82">(adjusted ' . ( $st['adjust'] > 0 ? '+' : '' ) . (int) $st['adjust'] . ')</span>' : '' );
+					} else {
+						echo '<span style="color:#787c82">Off</span>';
+					}
+					?></td>
 					<td>
 						<?php if ( $count ) : ?><a class="button button-small" href="<?php echo esc_url( admin_url( 'edit.php?post_type=gm_order&gm_customer=' . $user->ID ) ); ?>">View orders</a><?php endif; ?>
 						<a class="button button-small" href="<?php echo esc_url( get_edit_user_link( $user->ID ) ); ?>">Edit details</a>

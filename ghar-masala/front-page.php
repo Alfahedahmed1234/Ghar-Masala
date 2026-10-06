@@ -24,19 +24,21 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 
 <?php /* ===================================================== Home */ ?>
 <section class="gm-view" data-view="home">
-	<div class="gm-hero" style="background-image:linear-gradient(180deg,rgba(0,29,22,.8) 0%,rgba(0,29,22,.52) 45%,rgba(0,29,22,.8) 100%),url('<?php echo esc_url( gm_asset( 'images/hero.jpg' ) ); ?>')">
+	<div class="gm-hero" style="background-image:linear-gradient(180deg,rgba(0,29,22,.8) 0%,rgba(0,29,22,.52) 45%,rgba(0,29,22,.8) 100%),url('<?php echo esc_url( gm_img( 'img_hero', 'hero.jpg' ) ); ?>')">
 		<header class="gm-hero__bar">
 			<a class="gm-logo" href="<?php echo esc_url( gm_view_url() ); ?>"><img src="<?php echo esc_url( $gm_logo ); ?>" alt="Ghar Masala — tradition served with comfort" width="106" height="64"></a>
 			<?php get_template_part( 'template-parts/halal' ); ?>
 			<?php get_template_part( 'template-parts/nav', null, array( 'variant' => 'hero' ) ); ?>
 		</header>
 		<div class="gm-hero__body">
-			<span class="gm-hero__kicker">Tividale · Oldbury · Fresh to order</span>
-			<h1 class="gm-hero__title">Good food starts in the Kitchen.</h1>
+			<div class="gm-welcome gm-welcome--hero" data-gm-welcome hidden></div>
+			<span class="gm-hero__kicker"><?php echo gm_line( 'home_kicker' ); // phpcs:ignore ?></span>
+			<h1 class="gm-hero__title"><?php echo gm_line( 'home_title' ); // phpcs:ignore ?></h1>
 			<div class="gm-hero__ctas">
 				<a class="gm-hero__cta gm-hero__cta--main" href="#menu">Order now</a>
 				<a class="gm-hero__cta" href="#how">How it works</a>
 			</div>
+			<div class="gm-countdown gm-countdown--hero" data-gm-countdown hidden></div>
 			<div class="gm-hero__facts">
 				<div><p class="gm-hero__fact"><?php echo esc_html( $gm_win ); ?> min</p><p class="gm-hero__fact-label">Delivery window</p></div>
 				<div><p class="gm-hero__fact">£10</p><p class="gm-hero__fact-label">Minimum spend</p></div>
@@ -45,34 +47,33 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 		</div>
 	</div>
 	<?php gm_render_banners( 'home' ); ?>
+	<div class="gm-wrap"><?php gm_render_delivery_checker(); ?></div>
+	<div class="gm-wrap"><?php gm_render_loyalty_promo( 'home' ); ?></div>
 </section>
 
 <?php /* ===================================================== My story */ ?>
 <section class="gm-view" data-view="story" hidden>
 	<div class="gm-wrap gm-page-head">
 		<span class="gm-eyebrow">My story</span>
-		<h1 class="gm-title" style="max-width:20ch"><strong>Ghar Masala</strong>… it means House of Spice.</h1>
+		<h1 class="gm-title" style="max-width:20ch"><?php echo gm_line( 'story_title' ); // phpcs:ignore ?></h1>
 	</div>
 	<figure class="gm-story__wide">
-		<img src="<?php echo esc_url( gm_asset( 'images/spices.jpg' ) ); ?>" alt="Turmeric, chilli powder and saffron in wooden spoons" loading="lazy" width="1600" height="1097">
-		<figcaption class="gm-wrap">Spices blended in the kitchen, not bought in as paste.</figcaption>
+		<img src="<?php echo esc_url( gm_img( 'img_story_wide', 'spices.jpg' ) ); ?>" alt="Turmeric, chilli powder and saffron in wooden spoons" loading="lazy" width="1600" height="1097">
+		<figcaption class="gm-wrap"><?php echo gm_line( 'story_caption_1' ); // phpcs:ignore ?></figcaption>
 	</figure>
 	<div class="gm-wrap gm-story__body">
 		<div class="gm-prose">
-			<p>I was born and raised in the UK, in a Bengali household with Bangladeshi heritage. Food was how culture got passed down: how the family talked to each other, how guests were welcomed, how a bad day was fixed. Nothing about it was fussy. A curry, a pot of rice, something fried if people were lucky.</p>
-			<p>Years later I was working in a family restaurant, and the same question kept coming back over the counter — <em>can I buy the curry you cook at home?</em> Not the heavy, glossy version on the menu. The everyday one. There was a gap sitting in plain sight, and I decided to cook for it.</p>
+			<?php echo gm_paras( 'story_intro' ); // phpcs:ignore ?>
 		</div>
-		<blockquote class="gm-quote"><p>Tradition served with comfort. It is on the logo because it is the whole brief.</p></blockquote>
+		<?php if ( trim( gm_mod( 'story_quote' ) ) ) : ?><blockquote class="gm-quote"><p><?php echo gm_line( 'story_quote' ); // phpcs:ignore ?></p></blockquote><?php endif; ?>
 		<div class="gm-split">
 			<div class="gm-prose">
-				<p>So Ghar Masala runs on pre-orders only. You book a slot, I shop for that evening, and everything is cooked on the day it goes out — spices blended here, meat marinated overnight, no vats of sauce sitting around. It is why the menu is short, and why I am not trying to sell you everything.</p>
-				<p>I tested it the honest way: leaflets through doors in Tividale, cooking for neighbours and strangers, listening to what came back. People told me the food tasted like someone's kitchen rather than a takeaway, and that the portions were generous. That was the moment it stopped being an idea.</p>
-				<p>The person who cooks your order is the person who drives it to your door. For now that is the whole business, and I would rather it stayed that close for as long as it can.</p>
-				<p class="gm-signoff">Ahmed — founder, Ghar Masala</p>
+				<?php echo gm_paras( 'story_body' ); // phpcs:ignore ?>
+				<p class="gm-signoff"><?php echo gm_line( 'story_signoff' ); // phpcs:ignore ?></p>
 			</div>
 			<figure>
-				<img src="<?php echo esc_url( gm_asset( 'images/curry.jpg' ) ); ?>" alt="A home-style curry finished with fresh coriander" loading="lazy" width="1400" height="1176" style="aspect-ratio:5/4">
-				<figcaption>Cooked on the day of delivery — never held over.</figcaption>
+				<img src="<?php echo esc_url( gm_img( 'img_story_side', 'curry.jpg' ) ); ?>" alt="A home-style curry finished with fresh coriander" loading="lazy" width="1400" height="1176" style="aspect-ratio:5/4">
+				<figcaption><?php echo gm_line( 'story_caption_2' ); // phpcs:ignore ?></figcaption>
 			</figure>
 		</div>
 		<div class="gm-cta-row">
@@ -86,9 +87,33 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 <section class="gm-view" data-view="reviews" hidden>
 	<div class="gm-wrap gm-page">
 		<h1 class="gm-title">Reviews</h1>
-		<?php $gm_testimonials = gm_testimonials(); ?>
+		<?php
+		$gm_testimonials = gm_testimonials();
+		$gm_five         = array_values( array_filter( $gm_testimonials, function ( $t ) { $r = get_post_meta( $t->ID, '_gm_rating', true ); return '' === $r || 5 === (int) $r; } ) );
+		?>
+		<?php if ( $gm_five ) : ?>
+			<section class="gm-slides" data-gm-slides aria-roledescription="carousel" aria-label="<?php echo esc_attr( wp_strip_all_tags( gm_mod( 'reviews_heading' ) ) ); ?>">
+				<h2 class="gm-slides__head"><?php echo gm_line( 'reviews_heading' ); // phpcs:ignore ?></h2>
+				<div class="gm-slides__track">
+					<?php foreach ( array_slice( $gm_five, 0, 12 ) as $gm_i => $gm_t ) : ?>
+						<figure class="gm-slides__item" data-gm-slide<?php echo $gm_i ? ' hidden' : ''; ?>>
+							<p class="gm-stars" aria-label="5 out of 5 stars">★★★★★</p>
+							<blockquote><?php echo esc_html( '“' . wp_trim_words( preg_replace( '/^[\s"“”]+|[\s"“”]+$/u', '', wp_strip_all_tags( $gm_t->post_content ) ), 60 ) . '”' ); ?></blockquote>
+							<figcaption>— <?php echo esc_html( get_the_title( $gm_t ) ); ?></figcaption>
+						</figure>
+					<?php endforeach; ?>
+				</div>
+				<?php if ( count( $gm_five ) > 1 ) : ?>
+					<div class="gm-slides__nav">
+						<button type="button" data-gm-slide-prev aria-label="Previous review">‹</button>
+						<span class="gm-slides__dots"><?php foreach ( array_slice( $gm_five, 0, 12 ) as $gm_i => $gm_t ) : ?><button type="button" data-gm-slide-dot="<?php echo (int) $gm_i; ?>" aria-label="Review <?php echo (int) $gm_i + 1; ?>"<?php echo $gm_i ? '' : ' aria-current="true"'; ?>></button><?php endforeach; ?></span>
+						<button type="button" data-gm-slide-next aria-label="Next review">›</button>
+					</div>
+				<?php endif; ?>
+			</section>
+		<?php endif; ?>
 		<?php if ( $gm_testimonials ) : ?>
-			<p class="gm-lede">What people who have ordered from Ghar Masala say about the food.</p>
+			<p class="gm-lede"><?php echo gm_line( 'reviews_intro' ); // phpcs:ignore ?></p>
 			<div class="gm-quotes">
 				<?php foreach ( $gm_testimonials as $gm_t ) : ?>
 					<figure class="gm-quotes__item">
@@ -121,7 +146,8 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 					<?php endfor; ?>
 				</fieldset>
 				<div class="field"><label for="gm-rv-text">Your review</label><textarea class="input" id="gm-rv-text" name="review" rows="5" maxlength="1000" required placeholder="What did you order, and how was it?"></textarea></div>
-				<div class="field"><label for="gm-rv-email">Email (optional — not shown)</label><input class="input" id="gm-rv-email" name="email" type="email" autocomplete="email" placeholder="In case we want to say thank you"></div>
+				<div class="field"><label for="gm-rv-email">Email (optional — not shown)</label><input class="input" id="gm-rv-email" name="email" type="email" autocomplete="email" placeholder="<?php echo esc_attr( gm_review_reward()['enabled'] ? 'So we can send your thank-you code' : 'In case we want to say thank you' ); ?>">
+					<?php if ( gm_review_reward()['enabled'] ) : ?><p class="gm-small gm-muted" style="margin:6px 0 0">First review? Leave your email and we’ll send you <strong><?php echo esc_html( gm_num( (float) gm_review_reward()['percent'] ) ); ?>% off</strong> your next order once it’s published — on top of any other offer.</p><?php endif; ?></div>
 				<div class="gm-hp" aria-hidden="true"><label for="gm-rv-website">Website</label><input id="gm-rv-website" name="website" type="text" tabindex="-1" autocomplete="off"></div>
 				<p class="gm-error" data-gm-auth-error role="alert" hidden></p>
 				<p class="gm-success" data-gm-auth-ok role="status" hidden></p>
@@ -160,7 +186,7 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 <section class="gm-view" data-view="contact" hidden>
 	<div class="gm-wrap gm-page">
 		<h1 class="gm-title">Contact us</h1>
-		<p class="gm-lede">Questions about the menu, allergies, catering or an order? Get in touch — we usually reply the same day.</p>
+		<div class="gm-lede"><?php echo gm_paras( 'contact_intro' ); // phpcs:ignore ?></div>
 		<div class="gm-split gm-contact">
 			<div>
 				<div class="gm-facts gm-contact__facts">
@@ -197,17 +223,7 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 		<p class="gm-lede">Can't find what you need? Ring the kitchen on <a href="<?php echo esc_attr( $gm_tel ); ?>"><?php echo esc_html( $gm_phone ); ?></a>.</p>
 		<div class="gm-faq">
 			<?php
-			$gm_faqs = array(
-				'What makes you different?'                     => 'Fresh ingredients, cooked on the day of delivery — the pre-order method makes that possible. No base sauce, and nothing ultra-processed like others.',
-				'How do I place an order?'                      => 'Build your basket on the Menu page, then book a delivery slot — that takes you straight to checkout.',
-				'How far ahead can I order?'                    => 'Up to ' . (int) gm_setting( 'days_ahead' ) . ' days ahead. Orders for a given evening must be placed by ' . $gm_cut . '.',
-				'Is there a minimum order?'                     => 'Yes, £10. ' . gm_delivery_summary() . ' Your charge is worked out from your postcode at checkout.',
-				'What are your delivery hours?'                 => 'Deliveries run ' . $gm_hours . ', ' . $gm_days . '. Each slot gives you a ' . $gm_win . '-minute delivery window.',
-				'Is the food halal?'                            => 'Yes — look for the حلال mark in the header on every page.',
-				'Can I choose how spicy my curry is?'           => 'Yes — curries marked “spice to order” have a spice-level choice in your basket. Madras and Vindaloo are 30p extra.',
-				'Do you cater for allergies?'                   => 'Check the allergen table before you order and add a note at checkout — we will always talk it through with you.',
-				'Can I change or cancel an order after paying?' => 'Ring the kitchen as soon as you can on ' . $gm_phone . ' — we can usually help if your slot has not started yet.',
-			);
+			$gm_faqs = gm_faq_list();
 			foreach ( $gm_faqs as $q => $a ) :
 				?>
 				<details>
@@ -225,6 +241,9 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 		<h1 class="gm-title">Menu</h1>
 		<p class="gm-lede">Curries marked “spice to order” can be made as hot as you like — choose the spice level in your basket. Madras and Vindaloo are 30p extra.</p>
 
+		<div class="gm-welcome" data-gm-welcome hidden></div>
+		<div class="gm-countdown" data-gm-countdown data-gm-countdown-order hidden></div>
+		<?php gm_render_delivery_checker(); ?>
 		<?php gm_render_banners( 'menu' ); ?>
 		<div class="gm-key">
 			<p class="gm-key__title">Menu key</p>
@@ -294,6 +313,7 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 
 	<div id="order" class="gm-order">
 		<div class="gm-wrap gm-order__inner">
+			<?php gm_render_loyalty_promo( 'menu' ); ?>
 			<h2 class="gm-subtitle">Your order</h2>
 			<div class="gm-order__grid">
 				<div>
@@ -316,7 +336,7 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 <section class="gm-view" data-view="how" hidden>
 	<div class="gm-wrap gm-page">
 		<h1 class="gm-title" style="max-width:24ch">How ordering works</h1>
-		<p class="gm-lede">Every dish is cooked to order, so the kitchen works to booked slots rather than walk-ins. That means a fixed <?php echo esc_html( $gm_win ); ?>-minute delivery window and no guesswork about when your food arrives.</p>
+		<div class="gm-lede"><?php echo gm_paras( 'how_intro' ); // phpcs:ignore ?></div>
 
 		<div class="gm-steps">
 			<?php
@@ -360,7 +380,7 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 				<a class="gm-btn" style="margin-top:30px" href="#menu">Build your order</a>
 			</div>
 			<figure class="gm-grayscale">
-				<img src="<?php echo esc_url( gm_asset( 'images/curry-rice.jpg' ) ); ?>" alt="Curry, basmati rice and whole spices" loading="lazy" width="1400" height="2629" style="aspect-ratio:4/5">
+				<img src="<?php echo esc_url( gm_img( 'img_how', 'curry-rice.jpg' ) ); ?>" alt="Curry, basmati rice and whole spices" loading="lazy" width="1400" height="2629" style="aspect-ratio:4/5">
 			</figure>
 		</div>
 	</div>
@@ -443,6 +463,7 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 				<p><strong>One-tap reorder.</strong> Puts a past order straight back in your basket.</p>
 				<p><strong>Saved details.</strong> Address, mobile and spice level, ready at checkout.</p>
 			</div>
+			<?php gm_render_loyalty_promo( 'login' ); ?>
 		</div>
 		<div class="gm-panel">
 			<?php /* Sign in. Posts to wp-login.php only if JavaScript is off; app.js signs in on-site. */ ?>
@@ -534,6 +555,7 @@ if ( $gm_signed_in ) :
 			<div><p class="gm-stats__n gm-tnum"><?php echo esc_html( gm_money( $gm_spent ) ); ?></p><p class="gm-label">Spent to date</p></div>
 			<div><p class="gm-stats__n gm-stats__n--sm"><?php echo esc_html( $gm_saved ? $gm_saved['postcode'] : '—' ); ?></p><p class="gm-label">Saved address</p></div>
 		</div>
+		<?php gm_render_loyalty_card( $gm_user->ID ); ?>
 		<h2 class="gm-subtitle" style="margin:clamp(32px,4vw,56px) 0 20px">Order history</h2>
 		<div class="gm-history">
 			<?php if ( ! $gm_orders ) : ?>
@@ -608,6 +630,13 @@ if ( $gm_signed_in ) :
 					<div class="field"><label for="gm-discount">Discount code (optional)</label>
 						<div class="gm-codefield"><input class="input" id="gm-discount" name="discount" type="text" autocomplete="off" placeholder="Enter your code" style="text-transform:uppercase"><button type="button" class="gm-btn-outline gm-btn-outline--lg" data-gm-apply-code>Apply</button></div>
 						<p class="gm-small" data-gm-code-msg aria-live="polite" hidden></p></div>
+					<?php if ( $gm_signed_in && gm_loyalty()['enabled'] && gm_loyalty_status( $gm_user->ID )['ready'] ) : ?>
+						<label class="gm-loyalty-use" data-gm-loyalty-use>
+							<input type="checkbox" name="use_loyalty" value="1" checked data-gm-use-loyalty>
+							<span><strong>Use my <?php echo esc_html( gm_num( (float) gm_loyalty()['percent'] ) ); ?>% loyalty reward on this order</strong>
+							<small>Untick to save it for a later order — it won’t expire.</small></span>
+						</label>
+					<?php endif; ?>
 					<div class="gm-hp" aria-hidden="true"><label for="gm-website">Website</label><input id="gm-website" name="website" type="text" tabindex="-1" autocomplete="off"></div>
 				</div>
 				<?php if ( gm_stripe_enabled() && gm_cod_enabled() ) : ?>
@@ -649,6 +678,11 @@ if ( $gm_signed_in ) :
 		<div class="gm-done__facts">
 			<div><span class="gm-muted" data-gm-done-total-label>Total</span><strong class="gm-tnum" data-gm-done-total></strong></div>
 			<div><span class="gm-muted">Slot</span><strong data-gm-done-slot></strong></div>
+		</div>
+		<div class="gm-review-invite" data-gm-done-review hidden>
+			<p class="gm-review-invite__title">Enjoy your food? Tell us what you thought.</p>
+			<p class="gm-small"><?php echo gm_review_reward()['enabled'] ? esc_html( sprintf( 'Leave a review once you’ve eaten — your first one earns you %s%% off your next order.', gm_num( (float) gm_review_reward()['percent'] ) ) ) : 'Leave a review once you’ve eaten — it really helps a small kitchen like ours.'; ?></p>
+			<a class="gm-btn" href="#write-review">Leave a review</a>
 		</div>
 		<a class="gm-btn-outline gm-btn-outline--lg" href="#" data-gm-restart style="margin-top:32px">Back to the site</a>
 	</div>

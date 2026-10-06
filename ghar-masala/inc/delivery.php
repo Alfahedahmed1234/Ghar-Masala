@@ -173,3 +173,25 @@ add_action( 'rest_api_init', function () {
 		)
 	);
 } );
+
+/** "Do we deliver to you?" postcode box (home and menu pages). The check runs in app.js. */
+function gm_render_delivery_checker() {
+	if ( 'show' !== gm_mod( 'checker_show' ) ) {
+		return;
+	}
+	static $n = 0;
+	$n++;
+	?>
+	<form class="gm-checker" data-gm-checker novalidate>
+		<label class="gm-checker__title" for="gm-checker-<?php echo (int) $n; ?>"><?php echo esc_html( wp_strip_all_tags( gm_mod( 'checker_title' ) ) ); ?></label>
+		<div class="gm-checker__row">
+			<input class="input" id="gm-checker-<?php echo (int) $n; ?>" name="postcode" type="text" autocomplete="postal-code" placeholder="Your postcode, e.g. B69 1NY" maxlength="10" style="text-transform:uppercase">
+			<button type="submit" class="gm-btn">Check</button>
+		</div>
+		<p class="gm-small gm-muted gm-checker__rules"><?php echo esc_html( gm_delivery_summary() ); ?></p>
+		<div class="gm-checker__result" data-gm-checker-result aria-live="polite" hidden></div>
+		<template data-gm-checker-out><?php echo esc_html( wp_strip_all_tags( gm_fill( gm_mod( 'checker_out' ) ) ) ); ?> <a href="<?php echo esc_url( gm_view_url( 'contact' ) ); ?>">Contact us</a></template>
+	</form>
+	<?php
+}
+

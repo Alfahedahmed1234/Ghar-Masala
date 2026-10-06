@@ -72,6 +72,7 @@ function gm_discount_rule( $post ) {
 		'limit'   => (int) $m( 'limit' ),
 		'used'    => (int) $m( 'used' ),
 		'active'  => 'publish' === $post->post_status,
+		'always'  => (bool) $m( 'always_stack' ), // e.g. review thank-you codes: combine with anything
 	);
 }
 
@@ -99,7 +100,7 @@ function gm_discount_value( array $r, $subtotal ) {
 
 /** "10% off" / "£2.00 off" */
 function gm_discount_offer( array $r ) {
-	return ( 'fixed' === $r['type'] ? gm_money( $r['amount'] ) : rtrim( rtrim( number_format( $r['amount'], 2 ), '0' ), '.' ) . '%' ) . ' off';
+	return ( 'fixed' === $r['type'] ? gm_money( $r['amount'] ) : gm_num( $r['amount'] ) . '%' ) . ' off';
 }
 
 /** The public parts of a rule, for the page's JavaScript. */
@@ -112,6 +113,7 @@ function gm_discount_public( array $r ) {
 		'type'   => $r['type'],
 		'amount' => $r['amount'],
 		'min'    => $r['min'],
+		'always' => $r['always'],
 	);
 }
 
@@ -171,7 +173,7 @@ function gm_apply_discounts( $subtotal, $code = '' ) {
 		}
 	};
 
-	if ( $auto && $code_rule && ! gm_discount_stacking() ) {
+	if ( $auto && $code_rule && ! gm_discount_stacking() && ! $code_rule['always'] ) {
 		// Not combinable: give the customer whichever saves them more.
 		if ( $code_v > $auto_v ) {
 			$add( $code_rule, $code_v );
@@ -307,6 +309,10 @@ add_action( 'manage_gm_discount_posts_custom_column', function ( $col, $id ) {
 	switch ( $col ) {
 		case 'gm_kind':
 			echo 'auto' === $r['kind'] ? 'Automatic' : 'Code <code>' . esc_html( $r['code'] ) . '</code>';
+			$banner = (int) get_post_meta( $id, '_gm_banner', true );
+			if ( $banner && 'gm_banner' === get_post_type( $banner ) && 'trash' !== get_post_status( $banner ) ) {
+				printf( '<br><a href="%s">Advertised in a banner</a>', esc_url( get_edit_post_link( $banner ) ) );
+			}
 			break;
 		case 'gm_offer':
 			echo esc_html( gm_discount_offer( $r ) );
@@ -337,6 +343,7 @@ add_action( 'admin_menu', function () {
 	add_submenu_page( 'edit.php?post_type=gm_discount', 'Discount settings', 'Settings', 'manage_options', 'gm-discount-settings', function () {
 		if ( isset( $_POST['gm_discount_settings_nonce'] ) && wp_verify_nonce( sanitize_key( $_POST['gm_discount_settings_nonce'] ), 'gm_discount_settings' ) ) {
 			update_option( 'gm_discount_stack', empty( $_POST['gm_discount_stack'] ) ? 0 : 1 );
+			do_action( 'gm_discount_settings_save', wp_unslash( $_POST ) );
 			do_action( 'litespeed_purge_all' );
 			echo '<div class="notice notice-success"><p>Saved.</p></div>';
 		}
@@ -349,6 +356,7 @@ add_action( 'admin_menu', function () {
 					<tr><th scope="row">Codes on top of automatic discounts</th>
 						<td><label><input type="checkbox" name="gm_discount_stack" value="1" <?php checked( gm_discount_stacking() ); ?>> Allow a discount code to be used <strong>as well as</strong> an automatic discount</label>
 						<p class="description">When this is off and both apply, the customer gets whichever saves them more.</p></td></tr>
+					<?php do_action( 'gm_discount_settings_fields' ); ?>
 				</table>
 				<?php submit_button(); ?>
 			</form>

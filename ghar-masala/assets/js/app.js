@@ -30,6 +30,7 @@
 		order: null,
 		code: null, // discount code the customer applied: { code, label, offer, type, amount, min }
 		delivery: { status: 'idle' }, // idle | loading | ok | out | unknown | error
+		useLoyalty: true, // spend a ready loyalty reward on this order (customer can untick to save it)
 		busy: false
 	};
 
@@ -130,7 +131,7 @@
 			out.lines.push({ label: (isCode ? 'Code ' + d.rule.code + ': ' : '') + d.rule.label, pence: d.value });
 			out.pence += d.value;
 		};
-		if (auto && code && !DISC.stack) {
+		if (auto && code && !DISC.stack && !code.rule.always) {
 			if (code.value > auto.value) add(code, true);
 			else { add(auto, false); out.note = 'Discount codes can’t be combined with our automatic offer, so we’ve applied the better saving.'; }
 		} else {
@@ -138,6 +139,18 @@
 			if (code) add(code, true);
 		}
 		out.pence = Math.min(out.pence, sub);
+		// Loyalty reward: a % off what's left of the food total, on top of everything else.
+		var L = C.loyalty;
+		if (L && L.ready && state.useLoyalty) {
+			var food = sub - out.pence;
+			var v = Math.round(food * L.percent / 100);
+			if (L.cap > 0) v = Math.min(v, L.cap);
+			v = Math.max(0, Math.min(v, food));
+			if (v > 0) {
+				out.lines.push({ label: L.label, pence: v });
+				out.pence += v;
+			}
+		}
 		return out;
 	}
 
@@ -190,6 +203,8 @@
 		var scrollTo = null;
 		var view = hash;
 
+		var writeReview = hash === 'write-review';
+		if (writeReview) view = 'reviews';
 		if (hash === 'order' || hash === 'delivery') {
 			scrollTo = hash;
 			view = hash === 'order' ? 'menu' : 'how';
@@ -211,6 +226,10 @@
 		if (view === 'login') {
 			$$('[data-gm-auth]').forEach(function (el) { el.hidden = el.getAttribute('data-gm-auth') !== authMode; });
 			$$('[data-gm-auth-error],[data-gm-auth-ok]').forEach(function (el) { el.hidden = true; });
+		}
+		if (writeReview) {
+			openReviewForm();
+			return;
 		}
 		if (scrollTo) {
 			var target = document.getElementById(scrollTo);
@@ -335,7 +354,7 @@
 		if (!box) return;
 		var ids = Object.keys(state.cart);
 		if (!ids.length) {
-			box.innerHTML = '<p class="gm-muted">Nothing in the basket yet. Add dishes from the menu above and they appear here.</p>';
+			box.innerHTML = reorderCard() + '<p class="gm-muted">Nothing in the basket yet. Add dishes from the menu above and they appear here.</p>';
 			return;
 		}
 		var sub = subtotal();
@@ -360,9 +379,176 @@
 				discountRows(sub) +
 				(sub < C.minOrder ? '<p class="gm-small gm-warn" style="margin:6px 0 0">Add ' + money(C.minOrder - sub) + ' more to reach the ' + money(C.minOrder) + ' minimum.</p>' : '') +
 				'<a class="gm-btn gm-btn--block gm-mini__go" href="#order" data-gm-close-mini>' + (sub < C.minOrder ? 'View your order' : 'Choose a delivery slot') + '</a>'
-			: '<p class="gm-mini__title">Your basket is empty</p><p class="gm-small gm-muted">Add dishes from the menu and they will appear here.</p>' +
+			: '<p class="gm-mini__title">Your basket is empty</p>' + (reorderCard() || '<p class="gm-small gm-muted">Add dishes from the menu and they will appear here.</p>') +
 				'<a class="gm-btn gm-btn--block gm-mini__go" href="#menu" data-gm-close-mini>See the menu</a>';
 		$$('[data-gm-mini]').forEach(function (el) { el.innerHTML = html; });
+	}
+
+	/* ------------------------------------------------------------ next delivery countdown */
+
+	var countdownTimer = null;
+
+	function nextDelivery() {
+		var now = Date.now() / 1000;
+		return (state.days || []).filter(function (d) { return d.open && d.deadline > now; })[0] || null;
+	}
+
+	function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+	function renderCountdown() {
+		var boxes = $$('[data-gm-countdown]');
+		if (!C.countdown || !boxes.length) return;
+		var next = nextDelivery();
+		clearInterval(countdownTimer);
+		if (!next) {
+			boxes.forEach(function (b) { b.hidden = true; });
+			return;
+		}
+		var text = esc(C.countdown).replace('{next}', '<strong>' + esc(next.long) + '</strong>');
+		boxes.forEach(function (b) {
+			b.innerHTML = '<span class="gm-countdown__text">' + text + '</span> <span class="gm-countdown__timer gm-tnum" data-gm-timer aria-live="off"></span>' +
+				'<a class="gm-countdown__cta" href="' + (b.hasAttribute('data-gm-countdown-order') ? '#order' : '#menu') + '">Order now</a>';
+			b.hidden = false;
+		});
+		var tick = function () {
+			var left = Math.max(0, Math.floor(next.deadline - Date.now() / 1000));
+			if (!left) { clearInterval(countdownTimer); loadSlots(true); return; }
+			var d = Math.floor(left / 86400), h = Math.floor(left % 86400 / 3600), m = Math.floor(left % 3600 / 60), sec = left % 60;
+			var html = (d ? '<b>' + d + '</b><i>' + (d === 1 ? 'day' : 'days') + '</i>' : '') +
+				'<b>' + pad(h) + '</b><i>hrs</i><b>' + pad(m) + '</b><i>min</i><b>' + pad(sec) + '</b><i>sec</i>';
+			$$('[data-gm-timer]').forEach(function (t) { t.innerHTML = html; });
+		};
+		tick();
+		countdownTimer = setInterval(tick, 1000);
+	}
+
+	/* ------------------------------------------------------------ "Do we deliver to you?" checker */
+
+	var PC_KEY = 'gm_postcode';
+
+	function checkerResult(form, cls, html) {
+		var box = $('[data-gm-checker-result]', form);
+		box.className = 'gm-checker__result gm-checker__result--' + cls;
+		box.innerHTML = html;
+		box.hidden = false;
+	}
+
+	document.addEventListener('submit', function (e) {
+		var form = e.target.closest && e.target.closest('[data-gm-checker]');
+		if (!form) return;
+		e.preventDefault();
+		var input = form.elements.postcode;
+		var key = postcodeKey(input.value);
+		if (!/^[A-Z]{1,2}[0-9][A-Z0-9]?[0-9][A-Z]{2}$/.test(key)) {
+			checkerResult(form, 'bad', 'Please enter a full postcode, e.g. B69 1NY.');
+			input.focus();
+			return;
+		}
+		checkerResult(form, 'wait', 'Checking…');
+		fetch(rest('delivery', 'postcode=' + encodeURIComponent(key)), { credentials: 'same-origin', cache: 'no-store' })
+			.then(function (r) { return r.json().then(function (body) { return { ok: r.ok, body: body }; }); })
+			.then(function (res) {
+				var b = res.body;
+				if (res.ok && b.ok) {
+					try { localStorage.setItem(PC_KEY, b.postcode); } catch (err) {}
+					var inMenu = state.view === 'menu';
+					checkerResult(form, 'ok', '<strong>✓ Good news — we deliver to ' + esc(b.postcode) + '!</strong> ' +
+						esc(b.miles.toFixed(1)) + ' miles away · ' + (b.fee ? esc(money(b.fee)) + ' delivery' : 'free delivery') + '.' +
+						(inMenu ? '' : ' <a class="gm-checker__go" href="#menu">Start your order →</a>'));
+				} else if (res.ok) {
+					var out = $('[data-gm-checker-out]', form);
+					var extra = out ? out.innerHTML : '';
+					if (C.phone && C.phone.label) extra = extra.split(esc(C.phone.label)).join('<a href="' + esc(C.phone.href) + '">' + esc(C.phone.label) + '</a>');
+					checkerResult(form, 'out', '<strong>' + esc(b.message) + '</strong><br>' + extra);
+				} else {
+					checkerResult(form, 'bad', esc(b.message || 'We could not find that postcode — please check it.'));
+				}
+			})
+			.catch(function () {
+				checkerResult(form, 'bad', 'We could not check just now — please try again, or ring <a href="' + esc(C.phone.href) + '">' + esc(C.phone.label) + '</a>.');
+			});
+	});
+
+	/* ------------------------------------------------------------ welcome back */
+
+	var LAST_KEY = 'gm_last_order';
+
+	/** Remember the latest order on this device, to welcome the customer back next time. */
+	function rememberOrder(o, name) {
+		if (!o || !o.lines) return;
+		var cart = {};
+		o.lines.forEach(function (l) { if (items[l.id]) cart[l.id] = l.qty; });
+		try {
+			localStorage.setItem(LAST_KEY, JSON.stringify({
+				name: name || (C.user && C.user.name) || '',
+				lines: o.lines.map(function (l) { return { id: l.id, qty: l.qty, name: l.name }; }),
+				slot_date: o.slot_date || '', date: o.date || ''
+			}));
+		} catch (e) {}
+	}
+
+	/** The customer's latest order: from their account, or remembered on this device. */
+	function lastOrder() {
+		var last = null;
+		if (C.user) last = (C.user.orders || [])[0] || null;
+		else {
+			try { last = JSON.parse(localStorage.getItem(LAST_KEY) || 'null'); } catch (e) {}
+		}
+		if (!last || !last.lines || !last.lines.length) return null;
+		var cart = {};
+		last.lines.forEach(function (l) { if (items[l.id]) cart[l.id] = (cart[l.id] || 0) + l.qty; });
+		last.cart = Object.keys(cart).length ? cart : null;
+		return last;
+	}
+
+	function reorderButton(last, label) {
+		return last && last.cart ? '<button type="button" class="gm-welcome__btn" data-gm-reorder="' + esc(JSON.stringify(last.cart)) + '">' + esc(label) + '</button>' : '';
+	}
+
+	/** "Order again?" card for an empty basket. */
+	function reorderCard() {
+		var last = lastOrder();
+		if (!last || !last.cart) return '';
+		var what = last.lines.filter(function (l) { return items[l.id]; }).map(function (l) { return l.qty + ' × ' + l.name; }).join(', ');
+		return '<div class="gm-reorder"><p><strong>Order again?</strong> Your last order: ' + esc(what) + '</p>' + reorderButton(last, 'Add it to my basket') + '</div>';
+	}
+
+	function dishText(lines) {
+		var names = lines.slice().sort(function (a, b) { return b.qty - a.qty; }).map(function (l) { return l.name; });
+		if (names.length <= 1) return names[0] || 'meal';
+		if (names.length === 2) return names[0] + ' and ' + names[1];
+		return names[0] + ', ' + names[1] + ' and the rest';
+	}
+
+	function todayIso() {
+		var d = new Date();
+		return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+	}
+
+	function renderWelcome() {
+		var boxes = $$('[data-gm-welcome]');
+		if (!C.welcome || !boxes.length) return;
+		var last = lastOrder();
+		var name = C.user ? C.user.name : (last && last.name);
+		if (!C.user && !last) return; // only greet people we know
+		var first = String(name || '').trim().split(/\s+/)[0];
+		if (!first) return;
+		var tpl, reorder = '';
+		if (!last) {
+			tpl = C.welcome.first;
+		} else {
+			tpl = last.slot_date && last.slot_date >= todayIso() ? C.welcome.upcoming : C.welcome.back;
+			reorder = reorderButton(last, 'Order it again');
+		}
+		if (!tpl) return;
+		var msg = esc(tpl)
+			.replace(/\{name\}/g, '<strong>' + esc(first) + '</strong>')
+			.replace(/\{dish\}/g, last && last.lines ? esc(dishText(last.lines)) : 'meal')
+			.replace(/\{date\}/g, last && last.date ? esc(last.date) : 'your delivery day');
+		boxes.forEach(function (b) {
+			b.innerHTML = '<span class="gm-welcome__icon" aria-hidden="true">👋</span><p>' + msg + '</p>' + reorder;
+			b.hidden = false;
+		});
 	}
 
 	/* ------------------------------------------------------------ slots */
@@ -377,6 +563,7 @@
 			.then(function (data) {
 				state.days = data.days || [];
 				renderSlots();
+				renderCountdown();
 			})
 			.catch(function () {
 				state.days = state.days || [];
@@ -474,6 +661,9 @@
 		}
 		$('[data-gm-error]').hidden = true;
 		var postcode = $('[data-gm-pay] [name="postcode"]');
+		if (!postcode.value.trim()) {
+			try { postcode.value = localStorage.getItem(PC_KEY) || ''; } catch (e) {} // from the delivery checker
+		}
 		if (postcode.value.trim()) checkDelivery(postcode.value);
 		else renderTotals();
 	}
@@ -647,6 +837,7 @@
 		}
 
 		var payload = { items: state.cart, spice: state.spice, date: state.slot.date, time: state.slot.time, payment: payMethod() };
+		payload.use_loyalty = !!(C.loyalty && C.loyalty.ready && state.useLoyalty);
 		['name', 'email', 'address', 'postcode', 'phone', 'instructions', 'discount', 'website'].forEach(function (k) {
 			payload[k] = form.elements[k] ? form.elements[k].value.trim() : '';
 		});
@@ -669,6 +860,11 @@
 					return;
 				}
 				state.order = res.body.order;
+				rememberOrder(state.order, payload.name);
+				if (payload.use_loyalty) {
+					C.loyalty.ready = false; // spent
+					$$('[data-gm-loyalty-use]').forEach(function (el) { el.hidden = true; });
+				}
 				clearBasket();
 				go('done');
 			})
@@ -716,6 +912,8 @@
 		$('[data-gm-done-total-label]').textContent = paid ? 'Total paid' : processing ? 'Total' : 'To pay on delivery';
 		$('[data-gm-done-total]').textContent = o.total;
 		$('[data-gm-done-slot]').textContent = o.slot;
+		var invite = $('[data-gm-done-review]');
+		if (invite) invite.hidden = processing;
 	}
 
 	/* ------------------------------------------------------------ events */
@@ -762,6 +960,11 @@
 
 	document.addEventListener('change', function (e) {
 		if (e.target.name === 'payment') updatePayButton();
+		if (e.target.hasAttribute && e.target.hasAttribute('data-gm-use-loyalty')) {
+			state.useLoyalty = e.target.checked;
+			renderTotals();
+			renderCart();
+		}
 		var spiceFor = e.target.getAttribute && e.target.getAttribute('data-gm-spice');
 		if (spiceFor) {
 			if (e.target.value) state.spice[spiceFor] = e.target.value;
@@ -847,14 +1050,57 @@
 
 	/* ------------------------------------------------------------ reviews & contact */
 
-	var openReview = $('[data-gm-open-review]');
-	if (openReview) {
-		openReview.addEventListener('click', function () {
-			$('[data-gm-review-box]').hidden = false;
-			$('[data-gm-review-cta]').hidden = true;
-			$('#gm-rv-name').focus();
-		});
+	function openReviewForm() {
+		var box = $('[data-gm-review-box]');
+		if (!box) return;
+		box.hidden = false;
+		$('[data-gm-review-cta]').hidden = true;
+		box.scrollIntoView({ block: 'start' });
+		var name = $('#gm-rv-name');
+		if (C.user && !name.value) name.value = C.user.name || '';
+		var email = $('#gm-rv-email');
+		if (C.user && !email.value) email.value = C.user.email || '';
+		name.focus({ preventScroll: true });
 	}
+
+	var openReview = $('[data-gm-open-review]');
+	if (openReview) openReview.addEventListener('click', openReviewForm);
+
+	/* Reviews slideshow: rotates every 7s, pauses on hover/touch, swipe on phones. */
+	$$('[data-gm-slides]').forEach(function (box) {
+		var slides = $$('[data-gm-slide]', box);
+		var dots = $$('[data-gm-slide-dot]', box);
+		if (slides.length < 2) return;
+		var n = 0, timer = null, paused = false;
+		function showSlide(i) {
+			n = (i + slides.length) % slides.length;
+			slides.forEach(function (s, k) { s.hidden = k !== n; });
+			dots.forEach(function (d, k) { if (k === n) d.setAttribute('aria-current', 'true'); else d.removeAttribute('aria-current'); });
+		}
+		function restart() {
+			clearInterval(timer);
+			timer = setInterval(function () { if (!paused && !box.closest('[hidden]')) showSlide(n + 1); }, 7000);
+		}
+		box.addEventListener('click', function (e) {
+			if (e.target.closest('[data-gm-slide-prev]')) showSlide(n - 1);
+			else if (e.target.closest('[data-gm-slide-next]')) showSlide(n + 1);
+			else if (e.target.closest('[data-gm-slide-dot]')) showSlide(+e.target.closest('[data-gm-slide-dot]').getAttribute('data-gm-slide-dot'));
+			else return;
+			restart();
+		});
+		box.addEventListener('mouseenter', function () { paused = true; });
+		box.addEventListener('mouseleave', function () { paused = false; });
+		var x0 = null;
+		box.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; paused = true; }, { passive: true });
+		box.addEventListener('touchend', function (e) {
+			paused = false;
+			if (x0 === null) return;
+			var dx = e.changedTouches[0].clientX - x0;
+			x0 = null;
+			if (Math.abs(dx) > 40) { showSlide(dx < 0 ? n + 1 : n - 1); restart(); }
+		}, { passive: true });
+		restart();
+	});
 
 	/* ------------------------------------------------------------ sign in / create account */
 
@@ -1019,6 +1265,7 @@
 		history.replaceState(null, '', location.pathname);
 		if (C.returned.order) {
 			state.order = C.returned.order;
+			rememberOrder(state.order, '');
 			clearBasket();
 			history.replaceState(null, '', location.pathname + '#done');
 		} else if (C.returned.status === 'cancelled') {
@@ -1030,4 +1277,6 @@
 	renderCart();
 	route();
 	if (startNotice) notice(startNotice);
+	renderWelcome();
+	if (C.countdown) loadSlots();
 })();

@@ -66,7 +66,7 @@ function gm_stripe_checkout_url( $id ) {
 
 	// Discounts become a one-off Stripe coupon (Checkout can't take negative lines).
 	$discounts = array();
-	$off       = (int) get_post_meta( $id, '_gm_discount_pence', true );
+	$off       = (int) get_post_meta( $id, '_gm_discount_pence', true ) + (int) get_post_meta( $id, '_gm_loyalty_pence', true );
 	if ( $off > 0 ) {
 		$labels = wp_list_pluck( gm_order_discount_lines( $id ), 'label' );
 		$coupon = gm_stripe_request(

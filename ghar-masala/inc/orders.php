@@ -155,6 +155,7 @@ function gm_calendar() {
 			'dateLabel' => $day->format( 'j M' ),
 			'long'      => $day->format( 'l j F' ),
 			'open'      => $open,
+			'deadline'  => $day->modify( '-1 day' )->setTime( gm_rules()['cutoff_hour'], 0 )->getTimestamp(), // orders close (unix seconds)
 			'status'    => $open ? 'open' : ( $closed ? 'Closed' : ( $any_free ? 'Orders closed' : 'Fully booked' ) ),
 			'slots'     => $slots,
 		);
@@ -203,6 +204,7 @@ function gm_order_summary( $id ) {
 		'payment'  => get_post_meta( $id, '_gm_payment', true ),
 		'slot'     => gm_slot_label( $date, $time ),
 		'date'     => $day ? $day->format( 'D j F' ) : $date,
+		'slot_date' => $date,
 		'window'   => gm_slot_window( $time ),
 		'lines'    => $lines,
 		'subtotal'    => gm_money( $subtotal ),
@@ -349,6 +351,17 @@ function gm_create_order( array $data ) {
 	}
 	$off = $discount['pence'];
 
+	// Loyalty reward (signed-in customers with a full card who chose to use it).
+	$loyalty_used = false;
+	if ( ! empty( $data['use_loyalty'] ) && is_user_logged_in() && gm_loyalty()['enabled'] && gm_loyalty_status( get_current_user_id() )['ready'] ) {
+		$loy = gm_loyalty_value( $total - $off );
+		if ( $loy > 0 ) {
+			$discount['lines'][] = array( 'label' => gm_loyalty_label(), 'pence' => $loy );
+			$off                += $loy;
+			$loyalty_used        = true;
+		}
+	}
+
 	$payment = ( 'card' === ( $data['payment'] ?? '' ) && gm_stripe_enabled() ) ? 'card' : 'cod';
 	if ( 'cod' === $payment && ! gm_cod_enabled() ) {
 		return new WP_Error( 'gm_payment', 'Please pay by card.' );
@@ -384,9 +397,11 @@ function gm_create_order( array $data ) {
 		'_gm_delivery'  => $fee,
 		'_gm_miles'     => $checked ? $delivery['miles'] : '',
 		'_gm_total'     => $total - $off + $fee,
-		'_gm_discount_pence'   => $off,
+		'_gm_discount_pence'   => $off - ( $loyalty_used ? $loy : 0 ), // other discounts (loyalty kept apart for stamp maths)
+		'_gm_loyalty_pence'    => $loyalty_used ? $loy : 0,
 		'_gm_discount_lines'   => $discount['lines'],
 		'_gm_discount_code_id' => $discount['code'] ? $discount['code']['id'] : 0,
+		'_gm_loyalty_used'     => $loyalty_used ? 1 : 0,
 		'_gm_user'      => get_current_user_id(),
 		'_gm_created'   => time(),
 	);
@@ -487,7 +502,18 @@ function gm_send_order_emails( $id ) {
 
 	$customer = 'Hi ' . $m( 'name' ) . ",\n\nThank you — your Ghar Masala order is booked in.\n\n{$details}\n"
 		. 'Delivering to: ' . $m( 'address' ) . ', ' . $m( 'postcode' ) . "\n\n"
-		. 'We will text you when the food leaves the kitchen. Any changes, ring ' . gm_setting( 'phone' ) . ".\n\nGhar Masala — tradition served with comfort\n" . home_url( '/' ) . "\n";
+		. 'We will text you when the food leaves the kitchen. Any changes, ring ' . gm_setting( 'phone' ) . ".\n\n";
+	$user_id = (int) $m( 'user' );
+	if ( $user_id && gm_loyalty()['enabled'] ) {
+		$st        = gm_loyalty_status( $user_id );
+		$customer .= $st['ready']
+			? 'Loyalty: you have ' . $st['stamps'] . ' stamps — your ' . gm_num( gm_loyalty()['percent'] ) . "% reward is ready to use on any order (or save it for later).\n\n"
+			: 'Loyalty: ' . $st['stamps'] . ' of ' . $st['needed'] . ' stamps. ' . ( $st['needed'] - $st['stamps'] ) . ' more to unlock ' . gm_num( gm_loyalty()['percent'] ) . "% off.\n\n";
+	}
+	$rr        = gm_review_reward();
+	$customer .= 'Enjoyed it? We would love a review: ' . gm_view_url( 'write-review' ) . "\n"
+		. ( $rr['enabled'] && ! gm_reviewer_rewarded( $m( 'email' ) ) ? 'Your first review earns you ' . gm_num( $rr['percent'] ) . "% off your next order.\n" : '' )
+		. "\nGhar Masala — tradition served with comfort\n" . home_url( '/' ) . "\n";
 
 	wp_mail( $m( 'email' ), "Your Ghar Masala order {$o['ref']}", $customer );
 }

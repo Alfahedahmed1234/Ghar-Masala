@@ -152,14 +152,20 @@ function gm_ajax_review() {
 			. 'Approve or delete it here: ' . admin_url( 'post.php?post=' . $id . '&action=edit' ) . "\n"
 	);
 
-	wp_send_json_success( array( 'message' => 'Thank you! Your review has been sent and will appear once we have checked it.' ) );
+	$rr  = gm_review_reward();
+	$msg = 'Thank you! Your review has been sent and will appear once we have checked it.';
+	if ( $email && $rr['enabled'] && ! gm_reviewer_rewarded( $email ) ) {
+		$msg .= sprintf( ' As a thank you, we’ll email you a %s%% discount code when it goes live.', gm_num( (float) $rr['percent'] ) );
+	}
+	wp_send_json_success( array( 'message' => $msg ) );
 }
 
 /** Star rating box + approval hint on the edit screen. */
 add_action( 'add_meta_boxes_gm_testimonial', function ( $post ) {
 	add_meta_box( 'gm_review_rating', 'Rating', function ( $post ) {
 		wp_nonce_field( 'gm_review_save', 'gm_review_nonce' );
-		$rating = (int) get_post_meta( $post->ID, '_gm_rating', true );
+		$saved  = get_post_meta( $post->ID, '_gm_rating', true );
+		$rating = '' === $saved ? 5 : (int) $saved;
 		echo '<select name="gm_rating"><option value="0">No stars</option>';
 		for ( $i = 5; $i >= 1; $i-- ) {
 			printf( '<option value="%1$d" %2$s>%3$s (%1$d)</option>', (int) $i, selected( $rating, $i, false ), esc_html( str_repeat( '★', $i ) ) );
@@ -169,6 +175,7 @@ add_action( 'add_meta_boxes_gm_testimonial', function ( $post ) {
 		if ( $email ) {
 			echo '<p>Sent by <a href="mailto:' . esc_attr( $email ) . '">' . esc_html( $email ) . '</a> (not shown on the site)</p>';
 		}
+		echo '<p class="description">5-star reviews also rotate in the “What our customers are saying” slideshow.</p>';
 	}, 'gm_testimonial', 'side' );
 } );
 
@@ -192,6 +199,7 @@ add_filter( 'manage_gm_testimonial_posts_columns', function ( $cols ) {
 		if ( 'title' === $key ) {
 			$out['gm_rating'] = 'Rating';
 			$out['gm_status'] = 'Status';
+			$out['gm_reward'] = 'Thank-you code';
 		}
 	}
 	return $out;
@@ -201,6 +209,10 @@ add_action( 'manage_gm_testimonial_posts_custom_column', function ( $col, $id ) 
 	if ( 'gm_rating' === $col ) {
 		$r = (int) get_post_meta( $id, '_gm_rating', true );
 		echo $r ? esc_html( str_repeat( '★', $r ) ) : '—';
+	} elseif ( 'gm_reward' === $col ) {
+		$code  = get_post_meta( $id, '_gm_reward_code', true );
+		$email = get_post_meta( $id, '_gm_email', true );
+		echo $code ? 'Sent: <code>' . esc_html( $code ) . '</code>' : ( $email ? ( gm_reviewer_rewarded( $email ) ? 'Already had one' : 'Sent when published' ) : '<span style="color:#787c82">No email given</span>' );
 	} elseif ( 'gm_status' === $col ) {
 		$status = get_post_status( $id );
 		echo 'pending' === $status ? '<strong style="color:#b26200">Waiting for approval</strong>' : ( 'publish' === $status ? 'Live' : esc_html( ucfirst( $status ) ) );

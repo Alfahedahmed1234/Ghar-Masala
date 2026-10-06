@@ -59,6 +59,17 @@ Every customer account, newest first, with their contact details, address (from 
 - **Edit details:** change their name or email.
 - **Send password reset:** emails them a link to choose a new password on the site.
 - **Delete:** removes the account. Their past orders stay in Orders.
+- **Loyalty column:** shows stamps (e.g. 7 / 10) with a progress bar and a **Reward ready** badge. Use **+1 / −1** to add or remove a stamp by hand.
+
+## Loyalty programme (WP Admin → Customers → Loyalty programme)
+
+Signed-in customers get a stamp for every confirmed order whose food total, after other discounts, is at least the minimum (default £20). Once they have the full number of stamps (default 10), they get the reward (default 50% off the food total) on a later order. At checkout a ticked box says **Use my 50% loyalty reward**. They can untick it to save the reward for later, and it doesn't expire. Using the reward takes 10 stamps off the card, and extra stamps carry over. My account shows a progress bar, stamp card and history.
+
+On the same screen you can change the number of orders, minimum spend, reward %, an optional cap on the saving, and the advert ("Order 10 times, get 50% off"). The advert can appear on the home page and the menu page, and always shows on the sign-in / create-account page.
+
+## Review thank-you codes (WP Admin → Discounts → Settings)
+
+When you publish a customer's **first** review and they left an email address, they're automatically emailed a one-use code (default 10% off, valid 60 days). It works **on top of** any other discount. Each email address only gets one. You can change the % and the number of days, or switch it off. The codes appear in Discounts, and the Reviews list shows whether a code was sent.
 
 ## Discounts (WP Admin → Discounts)
 
@@ -81,7 +92,7 @@ For either type, set:
 
 Click **Add banner** and fill in:
 - **Message:** one short line, e.g. "20% off this week — use code at checkout".
-- **Discount code:** optional. It's shown with a **Copy** button that also fills it into the checkout box. Set the code itself up in Discounts.
+- **Discount code:** optional. It's shown with a **Copy** button that also fills it into the checkout box. Type a new code with its discount (% or £), minimum spend and use limit, and it's **created in Discounts for you**. Type an existing code and it links to it, so changing the amounts here updates the discount. The code stops working after the banner's "until" date. If the discount is switched off, expires or is used up, the banner hides itself.
 - **Button:** optional, linking to the Menu, Your order, Reviews, News, Contact, Allergens, How it works, My account, or any web address.
 - **Show it:** the **top of every page** (announcement bar), the **home page** under the main picture, the **menu page** above the dishes, and/or **checkout**.
 - **Colour:** saffron, green, dark, or red for urgent notices.
@@ -109,15 +120,31 @@ Discount codes are recorded but **not** taken off automatically. Adjust the bill
 | --- | --- |
 | Dishes, prices, descriptions, badges, allergens | **WP Admin → Menu** (see below) |
 | Opening days & times, closed dates, slots | **WP Admin → Orders → Opening times & slots** |
+| Page wording & pictures (home headline, my story, how it works, reviews, contact, FAQs) | **Appearance → Customize → Ghar Masala** |
+| Colours, fonts and text size | **Appearance → Customize → Ghar Masala → Colours & fonts** |
+| Countdown, welcome-back message, delivery checker | **Appearance → Customize → Ghar Masala → Countdown, welcome & delivery checker** |
 | Minimum order (£10) | `ghar-masala/inc/data.php` → `gm_rules()` |
-| Page wording (story, FAQs, how it works…) | `ghar-masala/front-page.php` |
 | Footer (social links, hours, company details) | `ghar-masala/template-parts/site-footer.php` |
-| Colours and fonts | top of `ghar-masala/style.css` |
 | Logo | **Appearance → Customize → Site Identity → Logo**, or replace `assets/images/logo.png` |
 | News | publish ordinary **Posts**; the News page lists the latest ten |
 | Testimonials | **WP Admin → Testimonials** (see below) |
 
 For the rows marked as files, use **Appearance → Theme File Editor**, or edit them in this repo and upload a new zip.
+
+### Appearance → Customize → Ghar Masala
+
+Everything here has a live preview. Click **Publish** to save.
+- **Home page:** the small line, the headline and the main picture.
+- **Countdown, welcome & delivery checker:**
+  - **Countdown:** shows the next delivery day and a live countdown to its order deadline on the home and menu pages. It skips closed and fully booked days.
+  - **Welcome message:** greets returning customers by name, with an **Order it again** button. It says "hope you enjoyed your…" after a past order, or "…is booked in for…" when an order is still to come. It works for signed-in customers and for anyone who has ordered on that device.
+  - **Delivery checker:** a "Do we deliver to you?" postcode box. If the postcode is in range, it's filled in at checkout. If it's out of range, customers are asked to ring or message you.
+  - Each one can be hidden, and its wording changed.
+- **My story / How it works:** the wording and photos. Leave a blank line between paragraphs. Remove a photo to go back to the original.
+- **Reviews, contact & FAQs:** the slideshow heading ("What our customers are saying"), the page introductions, and the FAQs (question on the first line, answer underneath, then a blank line).
+- **Colours & fonts:** the main and highlight colours, background, text colour, heading and body fonts, and text size.
+
+Text boxes understand `{hours}`, `{days}`, `{cutoff}`, `{window}`, `{phone}`, `{delivery}` and `{days_ahead}`. These fill in from your settings, so they stay right when you change opening times.
 
 ### The menu
 
@@ -139,6 +166,8 @@ Price changes only apply to new orders; past orders keep the price they were pla
 The page is called **Reviews** on the site.
 - **Reviews from customers:** customers can click **Leave a review** and fill in their name, area, a star rating and their review. Each one arrives in **WP Admin → Testimonials** marked **Waiting for approval**, and you get an email. A number on the Testimonials menu item shows how many are waiting.
 - **Approving:** open the review and click **Publish** to put it on the site, or **Bin** to delete it. Nothing goes live until you publish it.
+- **Slideshow:** 5-star reviews (and older ones with no rating set) rotate in the "What our customers are saying" banner at the top of the Reviews page. To leave a review out, set its Rating to something else.
+- **Review invitations:** after ordering, customers see "Enjoy your food? Tell us what you thought" with a button straight to the review form. The confirmation email includes the same link.
 - **Adding your own:** click **Add testimonial**. Put the customer's name in the title box and the quote in the text box below, set **Rating** and **Order** (lowest shows first), then click **Publish**.
 
 ### News timeline (WP Admin → News timeline)
