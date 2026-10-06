@@ -65,7 +65,7 @@ Every customer account, newest first, with their contact details, address (from 
 
 Signed-in customers get a stamp for every confirmed order whose food total, after other discounts, is at least the minimum (default £20). The order that completes the card gets the reward: with the defaults, the **10th order is 50% off** the food total, as long as it's £20 or more. At checkout a ticked box says **Use my 50% loyalty reward**. If they untick it, that order still earns its stamp and the reward is saved; it doesn't expire and can then be used on any later order, whatever its size. Using the reward starts a new card, and extra stamps carry over. My account shows a progress bar, stamp card and history.
 
-On the same screen you can change the number of orders, minimum spend, reward %, an optional cap on the saving, and the advert ("Order 10 times, get 50% off"). The advert sits next to the delivery checker on the home page and the menu page (you can switch each off), and always shows on the sign-in / create-account page.
+On the same screen you can change the number of orders, minimum spend, reward %, an optional cap on the saving, and the advert ("Order 10 times, get 50% off"). The advert runs full width under the main picture on the home page, and sits next to the delivery checker on the menu page (you can switch each off), and always shows on the sign-in / create-account page.
 
 ## Review thank-you codes (WP Admin → Discounts → Settings)
 
@@ -138,7 +138,7 @@ Everything here has a live preview. Click **Publish** to save.
 - **Countdown, welcome & delivery checker:**
   - **Countdown:** a slim bar at the top, under the announcement banner, shows the next delivery day and a live countdown to its order deadline. It skips closed and fully booked days.
   - **Welcome message:** a small bubble in the bottom-left corner greets returning customers by name, with an **Order it again** button. Customers can close it with ×, and it stays closed until they place another order. It says "hope you enjoyed your…" after a past order, or "…is booked in for…" when an order is still to come. It works for signed-in customers and for anyone who has ordered on that device.
-  - **Delivery checker:** a small "Do we deliver to you?" postcode box on the home and menu pages, next to the loyalty advert. If the postcode is in range, it's filled in at checkout. If it's out of range, customers see your note with **call** and **Message us** buttons.
+  - **Delivery checker:** a small "Do we deliver to you?" postcode box on the menu page, next to the loyalty advert. If the postcode is in range, it's filled in at checkout. If it's out of range, customers see your note with **call** and **Message us** buttons.
   - Each one can be hidden, and its wording changed.
 - **My story / How it works:** the wording and photos. Leave a blank line between paragraphs. Remove a photo to go back to the original.
 - **Reviews, contact & FAQs:** the slideshow heading ("What our customers are saying"), the page introductions, and the FAQs (question on the first line, answer underneath, then a blank line).

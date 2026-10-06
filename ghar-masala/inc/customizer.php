@@ -193,7 +193,7 @@ add_action( 'customize_register', function ( WP_Customize_Manager $wp ) {
 	$text( 'welcome', 'welcome_back', 'After a past order', 'textarea', '{name} = first name, {dish} = what they ordered last time.' );
 	$text( 'welcome', 'welcome_upcoming', 'When an order is still to come', 'textarea', '{name}, {dish}, {date} = the delivery day.' );
 	$text( 'welcome', 'welcome_first', 'Signed in, no orders yet', 'textarea', '{name} = first name.' );
-	$show( 'checker_show', 'Postcode delivery checker', 'Lets customers check their postcode on the home and menu pages before ordering.' );
+	$show( 'checker_show', 'Postcode delivery checker', 'Lets customers check their postcode on the menu page before ordering.' );
 	$text( 'welcome', 'checker_title', 'Delivery checker heading' );
 	$text( 'welcome', 'checker_out', 'Message when we don’t deliver there', 'textarea', 'Call and “Message us” buttons are added underneath.' );
 

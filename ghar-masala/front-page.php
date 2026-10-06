@@ -45,7 +45,7 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 		</div>
 	</div>
 	<?php gm_render_banners( 'home' ); ?>
-	<div class="gm-wrap"><?php gm_render_checker_and_promo( 'home' ); ?></div>
+	<div class="gm-wrap"><?php gm_render_loyalty_promo( 'home' ); ?></div>
 </section>
 
 <?php /* ===================================================== My story */ ?>

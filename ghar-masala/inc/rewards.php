@@ -383,7 +383,7 @@ function gm_render_loyalty_settings() {
 			<h2>Advert on the website</h2>
 			<table class="form-table" role="presentation">
 				<tr><th scope="row">Show it</th><td>
-					<label style="display:block"><input type="checkbox" name="promo_home" value="1" <?php checked( $l['promo_home'] ); ?>> Home page (next to the delivery checker)</label>
+					<label style="display:block"><input type="checkbox" name="promo_home" value="1" <?php checked( $l['promo_home'] ); ?>> Home page (full width, under the main picture)</label>
 					<label style="display:block"><input type="checkbox" name="promo_menu" value="1" <?php checked( $l['promo_menu'] ); ?>> Menu page (next to the delivery checker)</label>
 					<p class="description">It always appears on the Sign in / Create account page while the programme is on.</p></td></tr>
 				<tr><th scope="row"><label for="gm-l-title">Headline</label></th><td><input type="text" id="gm-l-title" name="promo_title" value="<?php echo esc_attr( $l['promo_title'] ); ?>" class="regular-text"></td></tr>
