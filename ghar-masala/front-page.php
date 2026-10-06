@@ -46,6 +46,15 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 	</div>
 	<?php gm_render_banners( 'home' ); ?>
 	<div class="gm-wrap"><?php gm_render_loyalty_promo( 'home' ); ?></div>
+	<div class="gm-wrap gm-local">
+		<h2 class="gm-local__title"><?php echo esc_html( gm_seo_fill( wp_strip_all_tags( gm_mod( 'local_heading' ) ) ) ); ?></h2>
+		<p class="gm-local__text"><?php echo esc_html( gm_seo_fill( wp_strip_all_tags( gm_mod( 'local_text' ) ) ) ); ?></p>
+		<?php if ( gm_seo_areas() ) : ?>
+			<ul class="gm-local__areas" aria-label="Areas we deliver to">
+				<?php foreach ( gm_seo_areas() as $gm_area ) : ?><li><?php echo esc_html( $gm_area ); ?></li><?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+	</div>
 </section>
 
 <?php /* ===================================================== My story */ ?>

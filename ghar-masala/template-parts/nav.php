@@ -9,7 +9,12 @@
  */
 $gm_variant = $args['variant'] ?? 'bar';
 $gm_id      = 'gm-nav-' . $gm_variant;
-$gm_home    = is_front_page() ? '' : gm_view_url();
+$gm_home    = gm_is_app() ? '' : gm_view_url();
+// Sections with their own address link there (good for Google); app.js opens them without a page load.
+$gm_link    = function ( $view ) use ( $gm_home ) {
+	$url = gm_seo_url( $view );
+	return $url ? $url : $gm_home . '#' . $view;
+};
 ?>
 <nav class="gm-nav gm-nav--<?php echo esc_attr( $gm_variant ); ?>" aria-label="Main" data-gm-nav>
 	<button type="button" class="gm-nav__toggle" data-gm-navtoggle aria-expanded="false" aria-controls="<?php echo esc_attr( $gm_id ); ?>">
@@ -17,28 +22,28 @@ $gm_home    = is_front_page() ? '' : gm_view_url();
 	</button>
 	<ul class="gm-nav__list" id="<?php echo esc_attr( $gm_id ); ?>">
 		<li class="gm-nav__item gm-nav__item--sub">
-			<a href="<?php echo esc_url( $gm_home . '#' ); ?>" data-nav="home">Home</a>
+			<a href="<?php echo esc_url( gm_is_app() ? home_url( '/' ) : gm_view_url() ); ?>" data-nav="home">Home</a>
 			<button type="button" class="gm-nav__caret" data-gm-subtoggle aria-expanded="false" aria-label="More Home links"><svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button>
 			<ul class="gm-nav__sub">
-				<li><a href="<?php echo esc_url( $gm_home . '#story' ); ?>" data-nav="story">My story</a></li>
-				<li><a href="<?php echo esc_url( $gm_home . '#news' ); ?>" data-nav="news">News</a></li>
-				<li><a href="<?php echo esc_url( $gm_home . '#reviews' ); ?>" data-nav="reviews">Reviews</a></li>
-				<li><a href="<?php echo esc_url( $gm_home . '#faq' ); ?>" data-nav="faq">FAQs</a></li>
+				<li><a href="<?php echo esc_url( $gm_link( 'story' ) ); ?>" data-nav="story">My story</a></li>
+				<li><a href="<?php echo esc_url( $gm_link( 'news' ) ); ?>" data-nav="news">News</a></li>
+				<li><a href="<?php echo esc_url( $gm_link( 'reviews' ) ); ?>" data-nav="reviews">Reviews</a></li>
+				<li><a href="<?php echo esc_url( $gm_link( 'faq' ) ); ?>" data-nav="faq">FAQs</a></li>
 			</ul>
 		</li>
 		<li class="gm-nav__item gm-nav__item--sub">
-			<a href="<?php echo esc_url( $gm_home . '#menu' ); ?>" data-nav="menu">Menu</a>
+			<a href="<?php echo esc_url( $gm_link( 'menu' ) ); ?>" data-nav="menu">Menu</a>
 			<button type="button" class="gm-nav__caret" data-gm-subtoggle aria-expanded="false" aria-label="More Menu links"><svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button>
 			<ul class="gm-nav__sub">
-				<li><a href="<?php echo esc_url( $gm_home . '#allergens' ); ?>" data-nav="allergens">Allergens</a></li>
-				<li><a href="<?php echo esc_url( $gm_home . '#how' ); ?>" data-nav="how">How it works</a></li>
+				<li><a href="<?php echo esc_url( $gm_link( 'allergens' ) ); ?>" data-nav="allergens">Allergens</a></li>
+				<li><a href="<?php echo esc_url( $gm_link( 'how' ) ); ?>" data-nav="how">How it works</a></li>
 			</ul>
 		</li>
 		<li class="gm-nav__item">
 			<a href="<?php echo esc_url( $gm_home . '#account' ); ?>" data-nav="account">My account</a>
 		</li>
 		<li class="gm-nav__item">
-			<a href="<?php echo esc_url( $gm_home . '#contact' ); ?>" data-nav="contact">Contact us</a>
+			<a href="<?php echo esc_url( $gm_link( 'contact' ) ); ?>" data-nav="contact">Contact us</a>
 		</li>
 	</ul>
 	<div class="gm-basket" data-gm-basketwrap>

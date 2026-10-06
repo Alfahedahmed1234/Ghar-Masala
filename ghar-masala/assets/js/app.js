@@ -199,8 +199,14 @@
 
 	/* ------------------------------------------------------------ routing */
 
+	/** The section a real address opens (/menu/ → menu), or ''. */
+	function pathView(path) {
+		return (C.viewPaths || {})[path || location.pathname] || '';
+	}
+
 	function route() {
-		var hash = decodeURIComponent(location.hash.replace(/^#/, ''));
+		// A bare "#" link means the home page; no hash at all means the section this address is for.
+		var hash = decodeURIComponent(location.hash.replace(/^#/, '')) || (location.href.slice(-1) === '#' ? 'home' : pathView());
 		var scrollTo = null;
 		var view = hash;
 
@@ -245,6 +251,17 @@
 		else location.hash = view;
 	}
 
+	/* Links to section addresses (/menu/, /reviews/…) open without a page load. */
+	document.addEventListener('click', function (e) {
+		var a = e.target.closest && e.target.closest('a[href]');
+		if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || a.target === '_blank') return;
+		if (a.origin !== location.origin || a.getAttribute('href').indexOf('#') !== -1 || !pathView(a.pathname)) return;
+		e.preventDefault();
+		if (a.pathname !== location.pathname || location.hash) history.pushState(null, '', a.pathname);
+		route();
+	});
+	window.addEventListener('popstate', route);
+
 	function show(view) {
 		state.view = view;
 		$$('.gm-view').forEach(function (el) { el.hidden = el.getAttribute('data-view') !== view; });
@@ -267,8 +284,9 @@
 		});
 
 		var titles = { home: '', menu: 'Menu', how: 'How it works', story: 'My story', reviews: 'Reviews', news: 'News', contact: 'Contact us', faq: 'FAQs', allergens: 'Allergens', login: 'Sign in', account: 'My account', pay: 'Checkout', done: 'Order confirmed' };
-		if (!show.baseTitle) show.baseTitle = document.title;
-		document.title = titles[view] ? titles[view] + ' — ' + show.baseTitle : show.baseTitle;
+		if (!show.firstTitle) show.firstTitle = document.title;
+		var first = C.startView || 'home';
+		document.title = view === first ? show.firstTitle : (titles[view] ? titles[view] + ' — Ghar Masala' : 'Ghar Masala');
 
 		if (view === 'menu') {
 			renderCart();

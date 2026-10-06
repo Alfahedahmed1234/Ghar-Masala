@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'GM_VERSION', '1.12.2' );
+define( 'GM_VERSION', '1.13.0' );
 
 /** Cache-busting version: changes whenever the file does. */
 function gm_ver( $file ) {
@@ -24,11 +24,12 @@ add_action( 'init', function () {
 		return;
 	}
 	update_option( 'gm_theme_version', GM_VERSION );
+	flush_rewrite_rules( false );                              // section addresses (/menu/, /reviews/…)
 	do_action( 'litespeed_purge_all' );                      // LiteSpeed Cache (incl. its mobile cache)
 	if ( function_exists( 'wp_cache_flush' ) ) {
 		wp_cache_flush();
 	}
-} );
+}, 99 );
 
 require get_template_directory() . '/inc/data.php';
 require get_template_directory() . '/inc/menu-admin.php';
@@ -40,6 +41,7 @@ require get_template_directory() . '/inc/customers.php';
 require get_template_directory() . '/inc/banners.php';
 require get_template_directory() . '/inc/rewards.php';
 require get_template_directory() . '/inc/customizer.php';
+require get_template_directory() . '/inc/seo.php';
 require get_template_directory() . '/inc/delivery.php';
 require get_template_directory() . '/inc/accounts.php';
 require get_template_directory() . '/inc/testimonials.php';
@@ -66,15 +68,16 @@ function gm_logo_url() {
 	return $src ? $src : gm_asset( 'images/logo.png' );
 }
 
-/** Link to one of the front page's views, e.g. gm_view_url( 'menu' ). */
+/** Link to one of the site's sections, e.g. gm_view_url( 'menu' ) → /menu/ (or /#account for sections without their own address). */
 function gm_view_url( $view = '' ) {
-	return home_url( '/' ) . ( $view ? '#' . $view : '' );
+	$url = $view && function_exists( 'gm_seo_url' ) ? gm_seo_url( $view ) : '';
+	return $url ? $url : home_url( '/' ) . ( $view ? '#' . $view : '' );
 }
 
 add_action( 'wp_enqueue_scripts', function () {
 	wp_enqueue_style( 'ghar-masala', get_stylesheet_uri(), array(), gm_ver( 'style.css' ) );
 
-	if ( ! is_front_page() ) {
+	if ( ! gm_is_app() ) {
 		return;
 	}
 
@@ -136,6 +139,8 @@ add_action( 'wp_enqueue_scripts', function () {
 			'cod'  => gm_cod_enabled(),
 		),
 		'returned'  => gm_return_state(),
+		'startView' => gm_current_view(),
+		'viewPaths' => gm_view_paths(),
 	);
 	if ( is_user_logged_in() ) {
 		// Only ever printed for signed-in visitors, whose pages are not cached.
@@ -174,6 +179,11 @@ function gm_saved_details( $user_id ) {
 	return $out;
 }
 
+/** Which theme version is live (view the page source and search for "Ghar Masala theme"). */
+add_action( 'wp_head', function () {
+	echo '<meta name="generator" content="Ghar Masala theme ' . esc_attr( GM_VERSION ) . '">' . "\n";
+}, 1 );
+
 /** Fonts are bundled with the theme, so start loading the main one early. */
 add_action( 'wp_head', function () {
 	printf( '<link rel="preload" href="%s" as="font" type="font/woff2" crossorigin>' . "\n", esc_url( gm_asset( 'fonts/archivo-latin.woff2' ) ) );
@@ -208,7 +218,7 @@ function gm_allergen_note() {
  * The basket link there simply goes to the order section on the home page.
  */
 add_action( 'wp_footer', function () {
-	if ( is_front_page() ) {
+	if ( gm_is_app() ) {
 		return;
 	}
 	?>
@@ -224,3 +234,13 @@ add_action( 'wp_footer', function () {
 	</script>
 	<?php
 } );
+
+/** Section addresses for app.js: { "/menu/": "menu", … } (paths only). */
+function gm_view_paths() {
+	$out = array( wp_make_link_relative( home_url( '/' ) ) => 'home' );
+	foreach ( gm_seo_pages() as $slug => $p ) {
+		$out[ wp_make_link_relative( home_url( '/' . $slug . '/' ) ) ] = $p[0];
+	}
+	return $out;
+}
+

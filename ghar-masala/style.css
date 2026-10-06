@@ -3,7 +3,7 @@ Theme Name: Ghar Masala
 Theme URI: https://www.facebook.com/gharmasala
 Author: Ghar Masala Ltd
 Description: Pre-order home-style curry delivery for Tividale & Oldbury — menu, basket, bookable 15-minute delivery slots, checkout (pay on delivery or Stripe card payments), allergen table and customer accounts.
-Version: 1.12.2
+Version: 1.13.0
 Requires at least: 6.0
 Requires PHP: 7.4
 License: GNU General Public License v2 or later
@@ -931,6 +931,14 @@ textarea.input { min-height: 110px; resize: vertical; font-family: inherit; }
 body[data-gm-view="pay"] .gm-welcome, body[data-gm-view="done"] .gm-welcome, body[data-gm-view="login"] .gm-welcome, body[data-gm-view="account"] .gm-welcome { display: none; }
 @media (max-width: 600px) { .gm-welcome { left: 16px; bottom: 16px; width: min(290px, calc(100vw - 32px)); padding: 10px 30px 10px 12px; font-size: 13px; } .gm-welcome__btn { margin-top: 8px; padding: 4px 10px; font-size: 12.5px; } }
 body[data-gm-view="done"] .gm-countdown, body[data-gm-view="login"] .gm-countdown, body[data-gm-view="account"] .gm-countdown { display: none; }
+
+/* ============================================= Local introduction (home) */
+
+.gm-local { padding-top: 4px; padding-bottom: clamp(24px, 3vw, 40px); }
+.gm-local__title { font-size: clamp(19px, 2.2vw, 24px); font-weight: 700; margin: 0 0 8px; max-width: 40ch; }
+.gm-local__text { margin: 0; max-width: 72ch; color: var(--ink-72); font-size: 15px; }
+.gm-local__areas { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 0; padding: 0; }
+.gm-local__areas li { padding: 3px 10px; border: 1px solid var(--color-divider); border-radius: 999px; font-size: 13px; color: var(--ink-72); }
 
 /* ============================================= Delivery checker + loyalty advert, side by side */
 

@@ -180,6 +180,22 @@ The News page shows a timeline of milestones, newest first.
 
 The Contact page shows your phone, email, website, delivery hours and social links, plus a message form. Name and contact number are required. Every message is emailed to the address in **Settings → Ghar Masala → Send new orders to** and is also saved in **WP Admin → Enquiries**, so nothing gets lost.
 
+## Local SEO (getting found on Google)
+
+The theme now:
+- gives each section its own address: `/menu/`, `/my-story/`, `/reviews/`, `/faqs/`, `/allergens/`, `/how-it-works/`, `/contact/` and `/news/`. Each has its own Google title and description, such as "Menu — Indian & Bangladeshi Curry Delivery in Tividale". The site still switches between them instantly.
+- adds a short local introduction and the areas you deliver to on the home page.
+- tells Google about the business in its own format (schema.org): a halal Indian/Bangladeshi restaurant in Tividale, with phone, delivery area (3 miles), delivery hours (from Opening times), the full menu with prices, the FAQs, and links to Facebook and Instagram.
+- adds all those addresses to the sitemap at `/wp-sitemap.xml`.
+
+Change the wording, town, areas and cuisine in **Appearance → Customize → Ghar Masala → Search engines (Google)**. If you install an SEO plugin (Yoast, Rank Math…), the theme leaves the title, description and canonical tags to that plugin.
+
+Outside the website:
+1. **Google Business Profile** (business.google.com) matters most for the map results. Set it up as a service-area business (hide your address), category "Indian takeaway" or "Bangladeshi restaurant", list the same areas, and use exactly the same name and phone number as the site.
+2. **Google Search Console:** add ghar-masala.co.uk, then submit `https://ghar-masala.co.uk/wp-sitemap.xml`.
+3. **Settings → Reading:** make sure "Discourage search engines from indexing this site" is **unticked**.
+4. Ask happy customers for **Google reviews**, and list the business with the same name and phone number on Just Eat/Deliveroo, Yell, Facebook and Nextdoor.
+
 ## Rebuilding the zip
 
 ```sh

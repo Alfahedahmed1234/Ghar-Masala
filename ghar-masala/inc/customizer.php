@@ -28,6 +28,14 @@ function gm_mod_defaults() {
 		'checker_show'     => 'show',
 		'checker_title'    => 'Do we deliver to you?',
 		'checker_out'      => 'We don’t usually deliver that far — but get in touch and we’ll see if we can arrange something.',
+		// Search engines (local SEO)
+		'seo_title'        => 'Ghar Masala | Home-Cooked Indian & Bangladeshi Curry Delivery in Tividale & Oldbury',
+		'seo_description'  => 'Fresh, home-style Indian and Bangladeshi curries cooked to order and delivered across {areas}. Halal, no base sauce, free delivery within 2 miles. Pre-order online.',
+		'seo_town'         => 'Tividale',
+		'seo_areas'        => 'Tividale, Oldbury, Tipton, Dudley Port, Great Bridge, Rowley Regis, Burnt Tree',
+		'seo_cuisine'      => 'Indian, Bangladeshi, Curry, Halal',
+		'local_heading'    => 'Home-cooked Indian & Bangladeshi food, delivered in {town}',
+		'local_text'       => 'Ghar Masala is a local, family-style kitchen cooking authentic Bangladeshi and Indian curries the way they’re made at home — fresh on the day, halal, and with no base sauce. We deliver to {areas}: free within 2 miles, and up to 3 miles from Tividale. Order online for an evening delivery slot.',
 		// My story
 		'story_title'      => '<strong>Ghar Masala</strong>… it means House of Spice.',
 		'img_story_wide'   => '',
@@ -196,6 +204,15 @@ add_action( 'customize_register', function ( WP_Customize_Manager $wp ) {
 	$show( 'checker_show', 'Postcode delivery checker', 'Lets customers check their postcode on the menu page before ordering.' );
 	$text( 'welcome', 'checker_title', 'Delivery checker heading' );
 	$text( 'welcome', 'checker_out', 'Message when we don’t deliver there', 'textarea', 'Call and “Message us” buttons are added underneath.' );
+
+	$section( 'seo', 'Search engines (Google)' );
+	$text( 'seo', 'seo_title', 'Home page title in Google', 'text', 'About 50–60 characters. Include what you sell and where, e.g. “Indian Curry Delivery in Tividale”.' );
+	$text( 'seo', 'seo_description', 'Home page description in Google', 'textarea', 'About 150 characters. {areas} = the areas below.' );
+	$text( 'seo', 'seo_town', 'Your town', 'text', 'Used in page titles, e.g. “Menu — Curry Delivery in Tividale”.' );
+	$text( 'seo', 'seo_areas', 'Areas you deliver to', 'textarea', 'Separate with commas. Shown on the home page and told to Google.' );
+	$text( 'seo', 'seo_cuisine', 'Cuisine', 'text', 'Separate with commas.' );
+	$text( 'seo', 'local_heading', 'Home page: local heading', 'text', '{town} and {areas} work here.' );
+	$text( 'seo', 'local_text', 'Home page: local introduction', 'textarea', 'A short paragraph about your food and where you deliver — this helps Google show you to local people.' );
 
 	$section( 'story', 'My story' );
 	$text( 'story', 'story_title', 'Title', 'text', 'Wrap words in <strong>…</strong> for bold.' );
