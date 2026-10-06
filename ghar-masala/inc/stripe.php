@@ -39,7 +39,7 @@ function gm_stripe_request( $method, $path, $body = array() ) {
  * @return string|WP_Error URL to send the customer to.
  */
 function gm_stripe_checkout_url( $id ) {
-	$items      = (array) get_post_meta( $id, '_gm_items', true );
+	$items      = array_filter( (array) get_post_meta( $id, '_gm_items', true ), 'is_array' );
 	$line_items = array();
 	foreach ( $items as $line ) {
 		$line_items[] = array(
@@ -68,7 +68,7 @@ function gm_stripe_checkout_url( $id ) {
 	$discounts = array();
 	$off       = (int) get_post_meta( $id, '_gm_discount_pence', true );
 	if ( $off > 0 ) {
-		$labels = wp_list_pluck( (array) get_post_meta( $id, '_gm_discount_lines', true ), 'label' );
+		$labels = wp_list_pluck( gm_order_discount_lines( $id ), 'label' );
 		$coupon = gm_stripe_request(
 			'POST',
 			'coupons',

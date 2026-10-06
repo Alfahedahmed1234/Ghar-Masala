@@ -13,3 +13,4 @@
 <body <?php body_class(); ?>>
 <?php wp_body_open(); ?>
 <a class="gm-skip" href="#gm-main">Skip to content</a>
+<?php gm_render_banners( 'top' ); ?>

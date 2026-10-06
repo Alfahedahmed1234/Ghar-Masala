@@ -3,7 +3,7 @@ Theme Name: Ghar Masala
 Theme URI: https://www.facebook.com/gharmasala
 Author: Ghar Masala Ltd
 Description: Pre-order home-style curry delivery for Tividale & Oldbury — menu, basket, bookable 15-minute delivery slots, checkout (pay on delivery or Stripe card payments), allergen table and customer accounts.
-Version: 1.9.0
+Version: 1.10.0
 Requires at least: 6.0
 Requires PHP: 7.4
 License: GNU General Public License v2 or later
@@ -684,6 +684,40 @@ button.gm-slot:hover { border-color: var(--color-accent); background: var(--colo
 .gm-codefield .input { flex: 1; min-width: 0; }
 .gm-codefield .gm-btn-outline { flex: none; }
 [data-gm-code-msg] { margin: 6px 0 0; }
+
+/* Banners & announcements */
+.gm-banners { position: relative; z-index: 25; }
+.gm-banner { --b-bg: var(--color-accent-2-500); --b-fg: var(--color-accent-2-900); --b-btn: var(--color-accent-2-900); --b-btn-fg: var(--color-accent-2-100); background: var(--b-bg); color: var(--b-fg); }
+.gm-banner--green { --b-bg: #006a4e; --b-fg: var(--cream); --b-btn: var(--cream); --b-btn-fg: #004735; }
+.gm-banner--dark { --b-bg: #16211c; --b-fg: var(--cream); --b-btn: var(--color-accent-2-500); --b-btn-fg: var(--color-accent-2-900); }
+.gm-banner--red { --b-bg: #b3261e; --b-fg: #fff; --b-btn: #fff; --b-btn-fg: #8a1c0b; }
+.gm-banner__inner { position: relative; max-width: 1240px; margin: 0 auto; padding: 9px calc(var(--gutter) + 28px) 9px var(--gutter); display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 14px; text-align: center; }
+.gm-banner__text { margin: 0; font-size: 14.5px; font-weight: 600; line-height: 1.4; }
+.gm-banner__code { display: inline-flex; align-items: center; gap: 6px; padding: 2px 4px 2px 10px; border: 1.5px dashed currentColor; font-size: 13px; }
+.gm-banner__code > span { opacity: .8; }
+.gm-banner__code strong { letter-spacing: .06em; }
+.gm-banner__code button, .gm-banner__btn {
+	border: 0; cursor: pointer; padding: 4px 10px; background: var(--b-btn); color: var(--b-btn-fg); font: 600 12.5px/1.4 var(--font); text-decoration: none;
+}
+.gm-banner__btn:hover { color: var(--b-btn-fg); opacity: .9; }
+.gm-banner__close {
+	position: absolute; right: calc(var(--gutter) - 10px); top: 50%; transform: translateY(-50%);
+	width: 30px; height: 30px; border: 0; background: none; color: inherit; font-size: 22px; line-height: 1; cursor: pointer; opacity: .75;
+}
+.gm-banner__close:hover { opacity: 1; }
+/* Banners inside a page sit in the content column as a card. */
+.gm-banners--home, .gm-banners--menu, .gm-banners--checkout { display: grid; gap: 10px; }
+.gm-banners--home { max-width: 1240px; margin: 22px auto 0; padding: 0 var(--gutter); }
+.gm-banners--menu { margin-top: 24px; }
+.gm-banners--checkout { margin: -10px 0 26px; }
+.gm-banners--home .gm-banner__inner, .gm-banners--menu .gm-banner__inner, .gm-banners--checkout .gm-banner__inner { padding: 14px 44px 14px 18px; justify-content: flex-start; text-align: left; }
+.gm-banners--home .gm-banner__text, .gm-banners--menu .gm-banner__text, .gm-banners--checkout .gm-banner__text { font-size: 15.5px; }
+.gm-banners--home .gm-banner__close, .gm-banners--menu .gm-banner__close, .gm-banners--checkout .gm-banner__close { right: 6px; }
+@media (max-width: 600px) {
+	.gm-banner__inner { padding-top: 8px; padding-bottom: 8px; gap: 6px 10px; }
+	.gm-banner__text { font-size: 13.5px; }
+}
+@media print { .gm-banners { display: none !important; } }
 
 /* Payment options */
 .gm-pay-option { align-items: flex-start; }

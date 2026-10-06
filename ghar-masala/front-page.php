@@ -44,6 +44,7 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 			</div>
 		</div>
 	</div>
+	<?php gm_render_banners( 'home' ); ?>
 </section>
 
 <?php /* ===================================================== My story */ ?>
@@ -224,6 +225,7 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 		<h1 class="gm-title">Menu</h1>
 		<p class="gm-lede">Curries marked “spice to order” can be made as hot as you like — choose the spice level in your basket. Madras and Vindaloo are 30p extra.</p>
 
+		<?php gm_render_banners( 'menu' ); ?>
 		<div class="gm-key">
 			<p class="gm-key__title">Menu key</p>
 			<div class="gm-key__grid">
@@ -592,6 +594,7 @@ if ( $gm_signed_in ) :
 			<a class="gm-textlink" href="#menu" data-gm-release>← Back to the menu</a>
 		</div>
 		<p class="gm-lede" style="margin:18px 0 clamp(28px,3.5vw,44px)">Delivery window <strong data-gm-slot-label></strong>.</p>
+		<?php gm_render_banners( 'checkout' ); ?>
 		<form class="gm-pay" data-gm-pay novalidate>
 			<div>
 				<h3 class="gm-step">Delivery details</h3>

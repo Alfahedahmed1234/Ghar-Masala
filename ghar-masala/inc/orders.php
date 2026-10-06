@@ -180,7 +180,7 @@ function gm_set_status( $id, $status ) {
 
 /** Public summary of an order, as the site's front end shows it. */
 function gm_order_summary( $id ) {
-	$items = (array) get_post_meta( $id, '_gm_items', true );
+	$items = array_filter( (array) get_post_meta( $id, '_gm_items', true ), 'is_array' );
 	$lines = array();
 	foreach ( $items as $line ) {
 		$lines[] = array(
@@ -214,8 +214,27 @@ function gm_order_summary( $id ) {
 			function ( $d ) {
 				return array( 'label' => $d['label'], 'amount' => '−' . gm_money( $d['pence'] ) );
 			},
-			(array) get_post_meta( $id, '_gm_discount_lines', true )
+			gm_order_discount_lines( $id )
 		),
+	);
+}
+
+/**
+ * Discount lines saved on an order. Orders placed before discounts existed
+ * have nothing saved, so anything that isn't a proper list counts as none.
+ */
+function gm_order_discount_lines( $id ) {
+	$lines = get_post_meta( $id, '_gm_discount_lines', true );
+	if ( ! is_array( $lines ) ) {
+		return array();
+	}
+	return array_values(
+		array_filter(
+			$lines,
+			function ( $d ) {
+				return is_array( $d ) && isset( $d['label'], $d['pence'] );
+			}
+		)
 	);
 }
 

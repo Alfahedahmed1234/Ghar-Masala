@@ -77,6 +77,19 @@ For either type, set:
 - **Ticked:** both apply.
 - **Unticked:** the customer automatically gets whichever saves them more, and is told why.
 
+## Banners & announcements (WP Admin → Banners)
+
+Click **Add banner** and fill in:
+- **Message:** one short line, e.g. "20% off this week — use code at checkout".
+- **Discount code:** optional. It's shown with a **Copy** button that also fills it into the checkout box. Set the code itself up in Discounts.
+- **Button:** optional, linking to the Menu, Your order, Reviews, News, Contact, Allergens, How it works, My account, or any web address.
+- **Show it:** the **top of every page** (announcement bar), the **home page** under the main picture, the **menu page** above the dishes, and/or **checkout**.
+- **Colour:** saffron, green, dark, or red for urgent notices.
+- **Dates:** optional from/until dates. Banners switch themselves on and off.
+- **Closing:** whether customers can close it with ×. It stays closed on their device. A new or edited message shows again.
+
+**Publish** shows it; **Draft** hides it. With several banners in the top bar, they take turns every 6 seconds (pausing while someone's mouse is over them). **Order** decides which comes first.
+
 ## Managing orders
 
 Go to **Orders** in the dashboard and open an order to see:
