@@ -345,7 +345,7 @@ function gm_create_order( array $data ) {
 
 	// Discounts (on the food total). An invalid code stops the order so the
 	// customer isn't surprised by a bill without the saving they expected.
-	$discount = gm_apply_discounts( $total, $customer['discount'] );
+	$discount = gm_apply_discounts( $total, $customer['discount'], array( 'email' => $customer['email'], 'phone' => $customer['phone'], 'user' => get_current_user_id() ) );
 	if ( is_wp_error( $discount ) ) {
 		return $discount;
 	}

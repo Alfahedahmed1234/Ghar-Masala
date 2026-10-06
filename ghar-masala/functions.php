@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'GM_VERSION', '1.13.1' );
+define( 'GM_VERSION', '1.14.0' );
 
 /** Cache-busting version: changes whenever the file does. */
 function gm_ver( $file ) {
@@ -151,6 +151,7 @@ add_action( 'wp_enqueue_scripts', function () {
 			'email'  => $user->user_email,
 			'orders' => $orders,
 			'saved'  => gm_saved_details( $user->ID ),
+			'isNew'  => (bool) gm_is_new_customer( $user->user_email, '', $user->ID ),
 		);
 	}
 

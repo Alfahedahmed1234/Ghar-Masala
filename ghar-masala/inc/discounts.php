@@ -73,6 +73,7 @@ function gm_discount_rule( $post ) {
 		'used'    => (int) $m( 'used' ),
 		'active'  => 'publish' === $post->post_status,
 		'always'  => (bool) $m( 'always_stack' ), // e.g. review thank-you codes: combine with anything
+		'new'     => (bool) $m( 'new_only' ),     // first order only (checked by email, phone and account)
 	);
 }
 
@@ -114,7 +115,47 @@ function gm_discount_public( array $r ) {
 		'amount' => $r['amount'],
 		'min'    => $r['min'],
 		'always' => $r['always'],
+		'newOnly' => $r['new'],
 	);
+}
+
+/** Phone number in one form for comparing: digits, UK national format (07…). */
+function gm_phone_key( $phone ) {
+	$d = preg_replace( '/\D+/', '', (string) $phone );
+	if ( 0 === strpos( $d, '44' ) ) {
+		$d = '0' . substr( $d, 2 );
+	}
+	return $d;
+}
+
+/**
+ * Has this customer never had a confirmed order? Checked against the email,
+ * the phone number and (if signed in) their account.
+ */
+function gm_is_new_customer( $email, $phone = '', $user_id = 0 ) {
+	global $wpdb;
+	$email = strtolower( trim( (string) $email ) );
+	$phone = gm_phone_key( $phone );
+	if ( '' === $email && strlen( $phone ) < 9 && ! $user_id ) {
+		return null; // can't tell yet
+	}
+	$rows = $wpdb->get_results(
+		"SELECT s.post_id, k.meta_key, k.meta_value FROM {$wpdb->postmeta} s
+		 JOIN {$wpdb->postmeta} k ON k.post_id = s.post_id AND k.meta_key IN ('_gm_email','_gm_phone','_gm_user')
+		 WHERE s.meta_key = '_gm_status' AND s.meta_value = 'confirmed'"
+	);
+	foreach ( (array) $rows as $row ) {
+		if ( '_gm_email' === $row->meta_key && '' !== $email && strtolower( trim( $row->meta_value ) ) === $email ) {
+			return false;
+		}
+		if ( '_gm_phone' === $row->meta_key && strlen( $phone ) >= 9 && gm_phone_key( $row->meta_value ) === $phone ) {
+			return false;
+		}
+		if ( '_gm_user' === $row->meta_key && $user_id && (int) $row->meta_value === (int) $user_id ) {
+			return false;
+		}
+	}
+	return true;
 }
 
 function gm_find_discount_code( $code ) {
@@ -140,10 +181,15 @@ function gm_find_discount_code( $code ) {
  *     note   string   Explanation when a code could not be combined.
  * }
  */
-function gm_apply_discounts( $subtotal, $code = '' ) {
+function gm_apply_discounts( $subtotal, $code = '', $customer = null ) {
+	// First-order-only discounts need to know who the customer is.
+	$is_new = $customer ? gm_is_new_customer( $customer['email'] ?? '', $customer['phone'] ?? '', $customer['user'] ?? 0 ) : null;
 	$auto      = null;
 	$auto_v    = 0;
 	foreach ( gm_discount_rules( 'auto' ) as $r ) {
+		if ( $r['new'] && true !== $is_new ) {
+			continue;
+		}
 		$v = $subtotal >= $r['min'] ? gm_discount_value( $r, $subtotal ) : 0;
 		if ( $v > $auto_v ) {
 			$auto   = $r;
@@ -157,6 +203,9 @@ function gm_apply_discounts( $subtotal, $code = '' ) {
 		$code_rule = gm_find_discount_code( $code );
 		if ( ! $code_rule ) {
 			return new WP_Error( 'gm_discount_invalid', 'That discount code isn’t valid or has expired.' );
+		}
+		if ( $code_rule['new'] && false === $is_new ) {
+			return new WP_Error( 'gm_discount_new_only', 'The code ' . $code_rule['code'] . ' is for first orders only — it looks like you’ve ordered with us before.' );
 		}
 		if ( $subtotal < $code_rule['min'] ) {
 			return new WP_Error( 'gm_discount_min', 'The code ' . $code_rule['code'] . ' needs a food total of at least ' . gm_money( $code_rule['min'] ) . '.' );
@@ -216,7 +265,26 @@ add_action( 'rest_api_init', function () {
 				if ( ! $r ) {
 					return new WP_Error( 'gm_discount_invalid', 'That discount code isn’t valid or has expired.', array( 'status' => 404 ) );
 				}
+				if ( $r['new'] && false === gm_is_new_customer( (string) $request['email'], (string) $request['phone'], get_current_user_id() ) ) {
+					return new WP_Error( 'gm_discount_new_only', 'The code ' . $r['code'] . ' is for first orders only — it looks like you’ve ordered with us before.', array( 'status' => 403 ) );
+				}
 				return gm_discount_public( $r );
+			},
+		)
+	);
+
+	// Is this a first order? (for "new customers only" offers at checkout)
+	register_rest_route(
+		'ghar-masala/v1',
+		'/new-customer',
+		array(
+			'methods'             => 'GET',
+			'permission_callback' => '__return_true',
+			'callback'            => function ( WP_REST_Request $request ) {
+				do_action( 'litespeed_control_set_nocache', 'ghar masala new customer' );
+				$res = new WP_REST_Response( array( 'isNew' => gm_is_new_customer( (string) $request['email'], (string) $request['phone'], get_current_user_id() ) ) );
+				$res->header( 'Cache-Control', 'no-store, max-age=0' );
+				return $res;
 			},
 		)
 	);
@@ -262,6 +330,9 @@ function gm_render_discount_box( $post ) {
 			<p class="description">Food total needed before it applies. For automatic discounts the basket tells customers how much more to add.</p></td></tr>
 		<tr><th scope="row"><label for="gm-expires">Ends on</label></th>
 			<td><input type="date" id="gm-expires" name="gm_expires" value="<?php echo esc_attr( $m( 'expires' ) ); ?>"> <span class="description">Optional — last day it can be used.</span></td></tr>
+		<tr><th scope="row">Who can use it</th>
+			<td><label><input type="checkbox" name="gm_new_only" value="1" <?php checked( (bool) $m( 'new_only' ) ); ?>> <strong>New customers only</strong> — first order only</label>
+			<p class="description">Checked against the email address, phone number and account on past confirmed orders. With <strong>Automatic</strong> it applies by itself at checkout once a new customer enters their details.</p></td></tr>
 		<tr class="gm-code-only"><th scope="row"><label for="gm-limit">Use limit</label></th>
 			<td><input type="number" id="gm-limit" name="gm_limit" min="0" step="1" value="<?php echo esc_attr( $m( 'limit', '0' ) ); ?>" style="width:7em"> <span class="description">Total orders that can use it (0 = unlimited). Used so far: <strong><?php echo (int) $m( 'used', 0 ); ?></strong></span></td></tr>
 	</table>
@@ -286,6 +357,7 @@ add_action( 'save_post_gm_discount', function ( $id ) {
 	update_post_meta( $id, '_gm_code', strtoupper( preg_replace( '/[^A-Za-z0-9_-]/', '', (string) ( $in['gm_code'] ?? '' ) ) ) );
 	update_post_meta( $id, '_gm_min_spend', max( 0, round( (float) ( $in['gm_min_spend'] ?? 0 ), 2 ) ) );
 	update_post_meta( $id, '_gm_limit', max( 0, (int) ( $in['gm_limit'] ?? 0 ) ) );
+	update_post_meta( $id, '_gm_new_only', empty( $in['gm_new_only'] ) ? 0 : 1 );
 	$exp = (string) ( $in['gm_expires'] ?? '' );
 	update_post_meta( $id, '_gm_expires', preg_match( '/^\d{4}-\d{2}-\d{2}$/', $exp ) ? $exp : '' );
 	do_action( 'litespeed_purge_all' );
@@ -309,6 +381,9 @@ add_action( 'manage_gm_discount_posts_custom_column', function ( $col, $id ) {
 	switch ( $col ) {
 		case 'gm_kind':
 			echo 'auto' === $r['kind'] ? 'Automatic' : 'Code <code>' . esc_html( $r['code'] ) . '</code>';
+			if ( $r['new'] ) {
+				echo '<br><em>New customers only</em>';
+			}
 			$banner = (int) get_post_meta( $id, '_gm_banner', true );
 			if ( $banner && 'gm_banner' === get_post_type( $banner ) && 'trash' !== get_post_status( $banner ) ) {
 				printf( '<br><a href="%s">Advertised in a banner</a>', esc_url( get_edit_post_link( $banner ) ) );

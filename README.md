@@ -82,6 +82,12 @@ For either type, set:
 - an optional **minimum spend** and **end date**
 - for codes, an optional **use limit** ("Used so far" counts confirmed orders)
 
+**New customers only:** tick this to make a discount (automatic or code) first-order only.
+- At checkout the site checks the customer's **email, phone number and account** against past confirmed orders.
+- **Automatic:** applies by itself once a new customer enters their email or phone. The basket shows "First order with us? 15% off — added at checkout once you enter your email".
+- **Code:** a returning customer who enters it is told it's for first orders only.
+- It's checked again when the order is placed, and the Discounts list shows *New customers only* under the type.
+
 **Publish** switches a discount on; **Draft** turns it off. Discounts come off the **food total** (delivery is charged as normal). They're worked out by the website itself and passed to Stripe for card payments.
 
 **Discounts → Settings → "Allow a discount code to be used as well as an automatic discount":**

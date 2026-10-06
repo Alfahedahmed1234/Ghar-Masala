@@ -30,7 +30,8 @@
 		order: null,
 		code: null, // discount code the customer applied: { code, label, offer, type, amount, min }
 		delivery: { status: 'idle' }, // idle | loading | ok | out | unknown | error
-		useLoyalty: true, // spend a ready loyalty reward on this order (customer can untick to save it)
+		useLoyalty: true,
+		isNew: C.user ? !!C.user.isNew : null, // first order? null = not known yet (no email/phone entered) // spend a ready loyalty reward on this order (customer can untick to save it)
 		busy: false
 	};
 
@@ -97,9 +98,15 @@
 		return Math.max(0, Math.min(v, sub));
 	}
 
+	/** "New customers only" offers apply once we know it's a first order. */
+	function ruleOk(r) {
+		return !r.newOnly || state.isNew === true;
+	}
+
 	function bestAuto(sub) {
 		var best = null, bestV = 0;
 		DISC.auto.forEach(function (r) {
+			if (!ruleOk(r)) return;
 			var v = sub >= r.min ? ruleValue(r, sub) : 0;
 			if (v > bestV) { best = r; bestV = v; }
 		});
@@ -111,7 +118,7 @@
 		var now = bestAuto(sub);
 		var next = null;
 		DISC.auto.forEach(function (r) {
-			if (r.min <= sub) return;
+			if (!ruleOk(r) || r.min <= sub) return;
 			if (now && ruleValue(r, r.min) <= ruleValue(now.rule, r.min)) return; // no better than what they have
 			if (!next || r.min < next.min) next = r;
 		});
@@ -123,7 +130,9 @@
 		var out = { lines: [], pence: 0, note: '', codeProblem: '' };
 		var auto = bestAuto(sub);
 		var code = null;
-		if (state.code) {
+		if (state.code && state.code.newOnly && state.isNew === false) {
+			out.codeProblem = 'Code ' + state.code.code + ' is for first orders only — it looks like you’ve ordered with us before.';
+		} else if (state.code) {
 			if (sub < state.code.min) out.codeProblem = 'Code ' + state.code.code + ' needs a food total of at least ' + money(state.code.min) + '.';
 			else code = { rule: state.code, value: ruleValue(state.code, sub) };
 		}
@@ -170,8 +179,13 @@
 			return '<div class="gm-nudge"><p>Add <strong>' + money(next.min - sub) + '</strong> more to get <strong>' + esc(next.offer) + '</strong> your order</p>' +
 				'<span class="gm-nudge__bar"><i style="width:' + pct + '%"></i></span></div>';
 		}
-		if (now) return '<div class="gm-nudge gm-nudge--done"><p>✓ <strong>' + esc(now.rule.offer) + '</strong> applied — ' + esc(now.rule.label) + '</p></div>';
-		return '';
+		var hint = '';
+		if (state.isNew === null) {
+			var first = DISC.auto.filter(function (r) { return r.newOnly && sub >= r.min && ruleValue(r, sub) > (now ? now.value : 0); })[0];
+			if (first) hint = '<div class="gm-nudge"><p><strong>First order with us? ' + esc(first.offer) + '</strong> — added at checkout once you enter your email.</p></div>';
+		}
+		if (now) return '<div class="gm-nudge gm-nudge--done"><p>✓ <strong>' + esc(now.rule.offer) + '</strong> applied — ' + esc(now.rule.label) + '</p></div>' + hint;
+		return hint;
 	}
 
 	function count() {
@@ -699,6 +713,36 @@
 		}
 		if (postcode.value.trim()) checkDelivery(postcode.value);
 		else renderTotals();
+		checkNew();
+	}
+
+	/* ------------------------------------------------------------ first-order offers */
+
+	var newTimer = null, newFor = '';
+
+	/** Ask the site whether the email/phone at checkout has ordered before. */
+	function checkNew() {
+		var hasNewOffer = DISC.auto.some(function (r) { return r.newOnly; }) || (state.code && state.code.newOnly);
+		var f = $('[data-gm-pay]');
+		if (!hasNewOffer || !f) return;
+		var email = f.elements.email.value.trim(), phone = f.elements.phone.value.trim();
+		var emailOk = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email), phoneOk = phone.replace(/\D/g, '').length >= 10;
+		if (!emailOk && !phoneOk) return;
+		var key = (emailOk ? email.toLowerCase() : '') + '|' + (phoneOk ? phone.replace(/\D/g, '') : '');
+		if (key === newFor) return;
+		clearTimeout(newTimer);
+		newTimer = setTimeout(function () {
+			newFor = key;
+			fetch(rest('new-customer', 'email=' + encodeURIComponent(emailOk ? email : '') + '&phone=' + encodeURIComponent(phoneOk ? phone : '')), { credentials: 'same-origin', cache: 'no-store' })
+				.then(function (r) { return r.json(); })
+				.then(function (b) {
+					if (key !== newFor) return;
+					state.isNew = b.isNew === true ? true : b.isNew === false ? false : null;
+					renderTotals();
+					renderCart();
+				})
+				.catch(function () { newFor = ''; });
+		}, 400);
 	}
 
 	/* ------------------------------------------------------------ delivery charge */
@@ -772,7 +816,9 @@
 			return;
 		}
 		renderCodeMsg('Checking…', false);
-		fetch(rest('discount', 'code=' + encodeURIComponent(code)), { credentials: 'same-origin', cache: 'no-store' })
+		var f = $('[data-gm-pay]');
+		var who = f ? '&email=' + encodeURIComponent(f.elements.email.value.trim()) + '&phone=' + encodeURIComponent(f.elements.phone.value.trim()) : '';
+		fetch(rest('discount', 'code=' + encodeURIComponent(code) + who), { credentials: 'same-origin', cache: 'no-store' })
 			.then(function (r) { return r.json().then(function (b) { return { ok: r.ok, body: b }; }); })
 			.then(function (res) {
 				if (!res.ok) {
@@ -992,6 +1038,7 @@
 
 	document.addEventListener('input', function (e) {
 		if (e.target.name === 'postcode' && e.target.closest('[data-gm-pay]')) checkDelivery(e.target.value);
+		if ((e.target.name === 'email' || e.target.name === 'phone') && e.target.closest('[data-gm-pay]')) checkNew();
 		if (e.target.id === 'gm-discount' && state.code && e.target.value.trim().toUpperCase() !== state.code.code) {
 			state.code = null; // edited after applying: needs applying again
 			renderTotals();
