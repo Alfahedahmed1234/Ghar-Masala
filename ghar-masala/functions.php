@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'GM_VERSION', '1.13.0' );
+define( 'GM_VERSION', '1.13.1' );
 
 /** Cache-busting version: changes whenever the file does. */
 function gm_ver( $file ) {

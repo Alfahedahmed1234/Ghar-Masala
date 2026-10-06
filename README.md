@@ -184,7 +184,7 @@ The Contact page shows your phone, email, website, delivery hours and social lin
 
 The theme now:
 - gives each section its own address: `/menu/`, `/my-story/`, `/reviews/`, `/faqs/`, `/allergens/`, `/how-it-works/`, `/contact/` and `/news/`. Each has its own Google title and description, such as "Menu — Indian & Bangladeshi Curry Delivery in Tividale". The site still switches between them instantly.
-- adds a short local introduction and the areas you deliver to on the home page.
+- adds a short local introduction and the areas you deliver to on the home page, centred in the main picture under the three boxes.
 - tells Google about the business in its own format (schema.org): a halal Indian/Bangladeshi restaurant in Tividale, with phone, delivery area (3 miles), delivery hours (from Opening times), the full menu with prices, the FAQs, and links to Facebook and Instagram.
 - adds all those addresses to the sitemap at `/wp-sitemap.xml`.
 
