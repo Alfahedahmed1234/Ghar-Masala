@@ -7,13 +7,28 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'GM_VERSION', '1.12.1' );
+define( 'GM_VERSION', '1.12.2' );
 
 /** Cache-busting version: changes whenever the file does. */
 function gm_ver( $file ) {
 	$mtime = @filemtime( get_template_directory() . '/' . $file );
 	return $mtime ? GM_VERSION . '.' . $mtime : GM_VERSION;
 }
+
+/**
+ * After a new version of the theme is uploaded, empty the page caches once
+ * (desktop and mobile), so every visitor gets the new design straight away.
+ */
+add_action( 'init', function () {
+	if ( get_option( 'gm_theme_version' ) === GM_VERSION ) {
+		return;
+	}
+	update_option( 'gm_theme_version', GM_VERSION );
+	do_action( 'litespeed_purge_all' );                      // LiteSpeed Cache (incl. its mobile cache)
+	if ( function_exists( 'wp_cache_flush' ) ) {
+		wp_cache_flush();
+	}
+} );
 
 require get_template_directory() . '/inc/data.php';
 require get_template_directory() . '/inc/menu-admin.php';
