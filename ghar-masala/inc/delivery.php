@@ -146,7 +146,7 @@ function gm_number( $n ) {
 function gm_delivery_summary() {
 	$r = gm_delivery_rules();
 	return sprintf(
-		'Free within %s miles of %s, then %s for each extra mile, up to %s miles.',
+		'Free delivery within %s miles of %s, then %s for each extra mile, up to %s miles.',
 		gm_number( $r['free_miles'] ),
 		$r['area'],
 		gm_money( $r['per_mile'] ),

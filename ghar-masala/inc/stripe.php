@@ -64,29 +64,51 @@ function gm_stripe_checkout_url( $id ) {
 		);
 	}
 
+	// Discounts become a one-off Stripe coupon (Checkout can't take negative lines).
+	$discounts = array();
+	$off       = (int) get_post_meta( $id, '_gm_discount_pence', true );
+	if ( $off > 0 ) {
+		$labels = wp_list_pluck( (array) get_post_meta( $id, '_gm_discount_lines', true ), 'label' );
+		$coupon = gm_stripe_request(
+			'POST',
+			'coupons',
+			array(
+				'amount_off'      => $off,
+				'currency'        => 'gbp',
+				'duration'        => 'once',
+				'max_redemptions' => 1,
+				'name'            => mb_substr( $labels ? implode( ' + ', $labels ) : 'Discount', 0, 40 ),
+			)
+		);
+		if ( is_wp_error( $coupon ) ) {
+			return $coupon;
+		}
+		$discounts = array( array( 'coupon' => $coupon['id'] ) );
+	}
+
 	$base    = home_url( '/' );
-	$session = gm_stripe_request(
-		'POST',
-		'checkout/sessions',
-		array(
-			'mode'                => 'payment',
-			'line_items'          => $line_items,
-			'customer_email'      => get_post_meta( $id, '_gm_email', true ),
-			'client_reference_id' => (string) $id,
-			'metadata'            => array(
-				'order_id' => (string) $id,
-				'ref'      => gm_order_ref( $id ),
-			),
-			'payment_intent_data' => array(
-				'description' => 'Ghar Masala ' . gm_order_ref( $id ) . ' — ' . gm_slot_label( get_post_meta( $id, '_gm_slot_date', true ), get_post_meta( $id, '_gm_slot_time', true ) ),
-			),
-			// Stripe's minimum; the slot hold (hold_minutes) is a little longer.
-			'expires_at'          => time() + 31 * MINUTE_IN_SECONDS,
-			// Stripe fills in {CHECKOUT_SESSION_ID} itself, so it must not be URL-encoded.
-			'success_url'         => add_query_arg( array( 'gm_stripe' => 'success', 'gm_order' => $id ), $base ) . '&session_id={CHECKOUT_SESSION_ID}',
-			'cancel_url'          => add_query_arg( array( 'gm_stripe' => 'cancel', 'gm_order' => $id, 'gm_key' => gm_order_key( $id ) ), $base ),
-		)
+	$params  = array(
+		'mode'                => 'payment',
+		'line_items'          => $line_items,
+		'customer_email'      => get_post_meta( $id, '_gm_email', true ),
+		'client_reference_id' => (string) $id,
+		'metadata'            => array(
+			'order_id' => (string) $id,
+			'ref'      => gm_order_ref( $id ),
+		),
+		'payment_intent_data' => array(
+			'description' => 'Ghar Masala ' . gm_order_ref( $id ) . ' — ' . gm_slot_label( get_post_meta( $id, '_gm_slot_date', true ), get_post_meta( $id, '_gm_slot_time', true ) ),
+		),
+		// Stripe's minimum; the slot hold (hold_minutes) is a little longer.
+		'expires_at'          => time() + 31 * MINUTE_IN_SECONDS,
+		// Stripe fills in {CHECKOUT_SESSION_ID} itself, so it must not be URL-encoded.
+		'success_url'         => add_query_arg( array( 'gm_stripe' => 'success', 'gm_order' => $id ), $base ) . '&session_id={CHECKOUT_SESSION_ID}',
+		'cancel_url'          => add_query_arg( array( 'gm_stripe' => 'cancel', 'gm_order' => $id, 'gm_key' => gm_order_key( $id ) ), $base ),
 	);
+	if ( $discounts ) {
+		$params['discounts'] = $discounts;
+	}
+	$session = gm_stripe_request( 'POST', 'checkout/sessions', $params );
 	if ( is_wp_error( $session ) ) {
 		return $session;
 	}

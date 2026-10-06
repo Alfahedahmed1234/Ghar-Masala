@@ -22,7 +22,8 @@ $gm_home    = is_front_page() ? '' : gm_view_url();
 			<ul class="gm-nav__sub">
 				<li><a href="<?php echo esc_url( $gm_home . '#story' ); ?>" data-nav="story">My story</a></li>
 				<li><a href="<?php echo esc_url( $gm_home . '#news' ); ?>" data-nav="news">News</a></li>
-				<li><a href="<?php echo esc_url( $gm_home . '#contact' ); ?>" data-nav="contact">Contact us</a></li>
+				<li><a href="<?php echo esc_url( $gm_home . '#reviews' ); ?>" data-nav="reviews">Reviews</a></li>
+				<li><a href="<?php echo esc_url( $gm_home . '#faq' ); ?>" data-nav="faq">FAQs</a></li>
 			</ul>
 		</li>
 		<li class="gm-nav__item gm-nav__item--sub">
@@ -35,6 +36,9 @@ $gm_home    = is_front_page() ? '' : gm_view_url();
 		</li>
 		<li class="gm-nav__item">
 			<a href="<?php echo esc_url( $gm_home . '#account' ); ?>" data-nav="account">My account</a>
+		</li>
+		<li class="gm-nav__item">
+			<a href="<?php echo esc_url( $gm_home . '#contact' ); ?>" data-nav="contact">Contact us</a>
 		</li>
 	</ul>
 	<div class="gm-basket" data-gm-basketwrap>

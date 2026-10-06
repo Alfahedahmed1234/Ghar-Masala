@@ -142,12 +142,20 @@ function gm_ajax_lost_password() {
 		wp_send_json_success( $sent );
 	}
 
-	$key = get_password_reset_key( $user );
-	if ( is_wp_error( $key ) ) {
+	if ( ! gm_send_reset_email( $user ) ) {
 		gm_account_fail( 'We could not send a reset link just now — please try again later.', 500 );
 	}
 	set_transient( 'gm_reset_sent_' . $user->ID, 1, MINUTE_IN_SECONDS );
 
+	wp_send_json_success( $sent );
+}
+
+/** Email a customer a link to choose a new password on the site. */
+function gm_send_reset_email( WP_User $user ) {
+	$key = get_password_reset_key( $user );
+	if ( is_wp_error( $key ) ) {
+		return false;
+	}
 	$link = add_query_arg(
 		array(
 			'gm_reset' => $key,
@@ -156,7 +164,7 @@ function gm_ajax_lost_password() {
 		home_url( '/' )
 	) . '#reset';
 
-	wp_mail(
+	return wp_mail(
 		$user->user_email,
 		'Reset your Ghar Masala password',
 		'Hi ' . ( $user->first_name ? $user->first_name : $user->display_name ) . ",\n\n"
@@ -165,8 +173,6 @@ function gm_ajax_lost_password() {
 			. "The link works for 24 hours. If you didn't ask for this, you can ignore this email — your password won't change.\n\n"
 			. "Ghar Masala — tradition served with comfort\n"
 	);
-
-	wp_send_json_success( $sent );
 }
 
 add_action( 'wp_ajax_nopriv_gm_reset_password', 'gm_ajax_reset_password' );

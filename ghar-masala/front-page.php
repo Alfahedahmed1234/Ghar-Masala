@@ -200,7 +200,7 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 				'What makes you different?'                     => 'Fresh ingredients, cooked on the day of delivery — the pre-order method makes that possible. No base sauce, and nothing ultra-processed like others.',
 				'How do I place an order?'                      => 'Build your basket on the Menu page, then book a delivery slot — that takes you straight to checkout.',
 				'How far ahead can I order?'                    => 'Up to ' . (int) gm_setting( 'days_ahead' ) . ' days ahead. Orders for a given evening must be placed by ' . $gm_cut . '.',
-				'Is there a minimum order?'                     => 'Yes, £10. Delivery is ' . lcfirst( gm_delivery_summary() ) . ' Your charge is worked out from your postcode at checkout.',
+				'Is there a minimum order?'                     => 'Yes, £10. ' . gm_delivery_summary() . ' Your charge is worked out from your postcode at checkout.',
 				'What are your delivery hours?'                 => 'Deliveries run ' . $gm_hours . ', ' . $gm_days . '. Each slot gives you a ' . $gm_win . '-minute delivery window.',
 				'Is the food halal?'                            => 'Yes — look for the حلال mark in the header on every page.',
 				'Can I choose how spicy my curry is?'           => 'Yes — curries marked “spice to order” have a spice-level choice in your basket. Madras and Vindaloo are 30p extra.',
@@ -602,7 +602,9 @@ if ( $gm_signed_in ) :
 					<div class="field"><label for="gm-post">Postcode</label><input class="input" id="gm-post" name="postcode" type="text" autocomplete="postal-code" placeholder="B69 1NY" required><p class="gm-small gm-muted" data-gm-postcode-msg aria-live="polite" style="margin:6px 0 0"></p></div>
 					<div class="field"><label for="gm-phone">Mobile</label><input class="input" id="gm-phone" name="phone" type="tel" autocomplete="tel" placeholder="07…" required></div>
 					<div class="field"><label for="gm-notes">Allergy or delivery notes (optional)</label><input class="input" id="gm-notes" name="instructions" type="text" placeholder="e.g. no dairy, side door"></div>
-					<div class="field"><label for="gm-discount">Discount code (optional)</label><input class="input" id="gm-discount" name="discount" type="text" placeholder="Enter your code"></div>
+					<div class="field"><label for="gm-discount">Discount code (optional)</label>
+						<div class="gm-codefield"><input class="input" id="gm-discount" name="discount" type="text" autocomplete="off" placeholder="Enter your code" style="text-transform:uppercase"><button type="button" class="gm-btn-outline gm-btn-outline--lg" data-gm-apply-code>Apply</button></div>
+						<p class="gm-small" data-gm-code-msg aria-live="polite" hidden></p></div>
 					<div class="gm-hp" aria-hidden="true"><label for="gm-website">Website</label><input id="gm-website" name="website" type="text" tabindex="-1" autocomplete="off"></div>
 				</div>
 				<?php if ( gm_stripe_enabled() && gm_cod_enabled() ) : ?>

@@ -52,6 +52,31 @@ Unlike the design prototype, this version takes real orders:
   - Booked counts appear in each box, so you can see what's taken.
   - These changes only affect that date.
 
+## Customers (WP Admin → Customers)
+
+Every customer account, newest first, with their contact details, address (from their last order), date joined, number of orders, total spent and last order date. You can search by name or email. For each customer:
+- **View orders:** opens Orders showing just that customer's orders.
+- **Edit details:** change their name or email.
+- **Send password reset:** emails them a link to choose a new password on the site.
+- **Delete:** removes the account. Their past orders stay in Orders.
+
+## Discounts (WP Admin → Discounts)
+
+Click **Add discount**, give it a name customers will see (e.g. "10% off orders over £15"), then choose:
+- **Discount code:** customers type the code (e.g. `WELCOME10`) at checkout and press **Apply**.
+- **Automatic:** applies by itself once the food total reaches the **Minimum spend**. The basket and mini basket show "Add £X more to get 10% off your order" with a progress bar, then "✓ 10% off applied".
+
+For either type, set:
+- **% off** or **£ off**
+- an optional **minimum spend** and **end date**
+- for codes, an optional **use limit** ("Used so far" counts confirmed orders)
+
+**Publish** switches a discount on; **Draft** turns it off. Discounts come off the **food total** (delivery is charged as normal). They're worked out by the website itself and passed to Stripe for card payments.
+
+**Discounts → Settings → "Allow a discount code to be used as well as an automatic discount":**
+- **Ticked:** both apply.
+- **Unticked:** the customer automatically gets whichever saves them more, and is told why.
+
 ## Managing orders
 
 Go to **Orders** in the dashboard and open an order to see:

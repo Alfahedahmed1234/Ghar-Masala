@@ -28,6 +28,7 @@
 		day: null,
 		slot: null, // { date, time, label }
 		order: null,
+		code: null, // discount code the customer applied: { code, label, offer, type, amount, min }
 		delivery: { status: 'idle' }, // idle | loading | ok | out | unknown | error
 		busy: false
 	};
@@ -84,6 +85,79 @@
 		return Object.keys(state.cart).reduce(function (sum, id) {
 			return sum + unitPrice(id) * state.cart[id];
 		}, 0);
+	}
+
+	/* ------------------------------------------------------------ discounts (mirrors inc/discounts.php) */
+
+	var DISC = C.discounts || { auto: [], stack: false };
+
+	function ruleValue(r, sub) {
+		var v = r.type === 'fixed' ? r.amount : Math.round(sub * r.amount / 100);
+		return Math.max(0, Math.min(v, sub));
+	}
+
+	function bestAuto(sub) {
+		var best = null, bestV = 0;
+		DISC.auto.forEach(function (r) {
+			var v = sub >= r.min ? ruleValue(r, sub) : 0;
+			if (v > bestV) { best = r; bestV = v; }
+		});
+		return best ? { rule: best, value: bestV } : null;
+	}
+
+	/** The next automatic offer the customer can unlock by adding more. */
+	function nextAuto(sub) {
+		var now = bestAuto(sub);
+		var next = null;
+		DISC.auto.forEach(function (r) {
+			if (r.min <= sub) return;
+			if (now && ruleValue(r, r.min) <= ruleValue(now.rule, r.min)) return; // no better than what they have
+			if (!next || r.min < next.min) next = r;
+		});
+		return next;
+	}
+
+	/** { lines: [{label, pence}], pence, note, codeProblem } */
+	function discounts(sub) {
+		var out = { lines: [], pence: 0, note: '', codeProblem: '' };
+		var auto = bestAuto(sub);
+		var code = null;
+		if (state.code) {
+			if (sub < state.code.min) out.codeProblem = 'Code ' + state.code.code + ' needs a food total of at least ' + money(state.code.min) + '.';
+			else code = { rule: state.code, value: ruleValue(state.code, sub) };
+		}
+		var add = function (d, isCode) {
+			out.lines.push({ label: (isCode ? 'Code ' + d.rule.code + ': ' : '') + d.rule.label, pence: d.value });
+			out.pence += d.value;
+		};
+		if (auto && code && !DISC.stack) {
+			if (code.value > auto.value) add(code, true);
+			else { add(auto, false); out.note = 'Discount codes can’t be combined with our automatic offer, so we’ve applied the better saving.'; }
+		} else {
+			if (auto) add(auto, false);
+			if (code) add(code, true);
+		}
+		out.pence = Math.min(out.pence, sub);
+		return out;
+	}
+
+	function discountRows(sub) {
+		return discounts(sub).lines.map(function (l) {
+			return '<div class="gm-sum gm-sum--tight gm-sum--discount"><span>' + esc(l.label) + '</span><span class="gm-tnum">−' + money(l.pence) + '</span></div>';
+		}).join('');
+	}
+
+	/** "Add £3.20 more to get 10% off" (or what's already applied). */
+	function offerNudge(sub) {
+		var next = nextAuto(sub);
+		var now = bestAuto(sub);
+		if (next) {
+			var pct = Math.max(4, Math.min(100, Math.round(sub / next.min * 100)));
+			return '<div class="gm-nudge"><p>Add <strong>' + money(next.min - sub) + '</strong> more to get <strong>' + esc(next.offer) + '</strong> your order</p>' +
+				'<span class="gm-nudge__bar"><i style="width:' + pct + '%"></i></span></div>';
+		}
+		if (now) return '<div class="gm-nudge gm-nudge--done"><p>✓ <strong>' + esc(now.rule.offer) + '</strong> applied — ' + esc(now.rule.label) + '</p></div>';
+		return '';
 	}
 
 	function count() {
@@ -233,15 +307,27 @@
 			'</span>';
 	}
 
+	var TRASH = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>';
+
 	function lineHtml(id) {
 		var it = items[id];
-		return '<div class="gm-line">' +
+		return '<div class="gm-line" data-gm-line="' + esc(id) + '">' +
+			'<div class="gm-line__swipe" aria-hidden="true">' + TRASH + ' Remove</div>' +
+			'<div class="gm-line__content">' +
 			'<div class="gm-line__row">' +
 			'<span class="gm-line__name">' + esc(it.name) + '</span>' +
 			'<span class="gm-line__total gm-tnum">' + money(unitPrice(id) * state.cart[id]) + '</span>' +
+			'<button type="button" class="gm-trash" data-gm-remove="' + esc(id) + '" aria-label="Remove ' + esc(it.name) + ' from your order" title="Remove">' + TRASH + '</button>' +
 			'</div>' +
 			'<div class="gm-line__row gm-line__row--controls">' + spiceSelect(id) + stepper(id) + '</div>' +
-			'</div>';
+			'</div></div>';
+	}
+
+	function removeItem(id) {
+		delete state.cart[id];
+		delete state.spice[id];
+		save();
+		renderCart();
 	}
 
 	function renderBasket() {
@@ -252,8 +338,13 @@
 			box.innerHTML = '<p class="gm-muted">Nothing in the basket yet. Add dishes from the menu above and they appear here.</p>';
 			return;
 		}
-		box.innerHTML = ids.map(lineHtml).join('') +
-			'<div class="gm-sum"><span class="gm-soft">Subtotal</span><span class="gm-tnum">' + money(subtotal()) + '</span></div>' +
+		var sub = subtotal();
+		var d = discounts(sub);
+		box.innerHTML = offerNudge(sub) + '<div class="gm-lines">' + ids.map(lineHtml).join('') + '</div>' +
+			'<p class="gm-small gm-muted gm-swipe-hint">Tip: swipe an item left to remove it.</p>' +
+			'<div class="gm-sum"><span class="gm-soft">Subtotal</span><span class="gm-tnum">' + money(sub) + '</span></div>' +
+			discountRows(sub) +
+			(d.pence ? '<div class="gm-sum gm-sum--tight"><span class="gm-soft">Food total</span><span class="gm-tnum">' + money(sub - d.pence) + '</span></div>' : '') +
 			'<div class="gm-sum gm-sum--tight"><span class="gm-soft">Delivery</span><span class="gm-soft">From your postcode at checkout</span></div>' +
 			'<p class="gm-small gm-muted" style="margin:4px 0 0">' + esc(C.deliveryRules) + '</p>';
 	}
@@ -263,9 +354,10 @@
 		var ids = Object.keys(state.cart);
 		var sub = subtotal();
 		var html = ids.length
-			? '<p class="gm-mini__title">Your order</p>' +
+			? '<p class="gm-mini__title">Your order</p>' + offerNudge(sub) +
 				'<div class="gm-mini__lines">' + ids.map(lineHtml).join('') + '</div>' +
 				'<div class="gm-sum"><span>Subtotal</span><span class="gm-tnum">' + money(sub) + '</span></div>' +
+				discountRows(sub) +
 				(sub < C.minOrder ? '<p class="gm-small gm-warn" style="margin:6px 0 0">Add ' + money(C.minOrder - sub) + ' more to reach the ' + money(C.minOrder) + ' minimum.</p>' : '') +
 				'<a class="gm-btn gm-btn--block gm-mini__go" href="#order" data-gm-close-mini>' + (sub < C.minOrder ? 'View your order' : 'Choose a delivery slot') + '</a>'
 			: '<p class="gm-mini__title">Your basket is empty</p><p class="gm-small gm-muted">Add dishes from the menu and they will appear here.</p>' +
@@ -427,6 +519,51 @@
 		}, 350);
 	}
 
+	function orderTotal() {
+		var sub = subtotal();
+		return sub - discounts(sub).pence + deliveryFee();
+	}
+
+	/* ------------------------------------------------------------ discount code at checkout */
+
+	function renderCodeMsg(text, bad) {
+		var el = $('[data-gm-code-msg]');
+		if (!el) return;
+		if (text === undefined) {
+			var problem = state.code ? discounts(subtotal()).codeProblem : '';
+			text = problem || (state.code ? '✓ Code ' + state.code.code + ' applied — ' + state.code.offer : '');
+			bad = !!problem;
+		}
+		el.textContent = text;
+		el.hidden = !text;
+		el.className = 'gm-small ' + (bad ? 'gm-warn' : 'gm-ok');
+	}
+
+	function applyCode() {
+		var input = $('#gm-discount');
+		var code = input.value.trim().toUpperCase();
+		if (!code) {
+			state.code = null;
+			renderCodeMsg('');
+			renderTotals();
+			return;
+		}
+		renderCodeMsg('Checking…', false);
+		fetch(rest('discount', 'code=' + encodeURIComponent(code)), { credentials: 'same-origin', cache: 'no-store' })
+			.then(function (r) { return r.json().then(function (b) { return { ok: r.ok, body: b }; }); })
+			.then(function (res) {
+				if (!res.ok) {
+					state.code = null;
+					renderTotals();
+					renderCodeMsg(res.body.message || 'That code isn’t valid.', true);
+					return;
+				}
+				state.code = res.body;
+				renderTotals();
+			})
+			.catch(function () { renderCodeMsg('Could not check the code — please try again.', true); });
+	}
+
 	function deliveryFee() {
 		return state.delivery.status === 'ok' ? state.delivery.fee : 0;
 	}
@@ -444,10 +581,14 @@
 			unknown: '<span class="gm-warn">Postcode not found</span>',
 			error: '<span class="gm-soft">Confirmed by the kitchen</span>'
 		}[d.status];
+		var disc = discounts(sub);
 		box.innerHTML =
 			'<div class="gm-sum"><span class="gm-soft">Subtotal</span><span class="gm-tnum">' + money(sub) + '</span></div>' +
+			discountRows(sub) +
 			'<div class="gm-sum gm-sum--tight"><span class="gm-soft">Delivery' + (d.status === 'ok' ? ' · ' + d.miles.toFixed(1) + ' miles' : '') + '</span><span class="gm-tnum">' + cell + '</span></div>' +
-			'<div class="gm-sum gm-sum--total"><span>Total</span><span class="gm-tnum">' + money(sub + deliveryFee()) + '</span></div>';
+			'<div class="gm-sum gm-sum--total"><span>Total</span><span class="gm-tnum">' + money(orderTotal()) + '</span></div>' +
+			(disc.note ? '<p class="gm-small gm-muted" style="margin:8px 0 0">' + esc(disc.note) + '</p>' : '');
+		renderCodeMsg();
 
 		var msg = $('[data-gm-postcode-msg]');
 		var text = {
@@ -464,7 +605,7 @@
 	}
 
 	function updatePayButton() {
-		var total = subtotal() + deliveryFee();
+		var total = orderTotal();
 		var overCash = C.cashLimit > 0 && total > C.cashLimit;
 		var cod = $('[data-gm-pay] input[type="radio"][value="cod"]');
 		var cardRadio = $('[data-gm-pay] input[type="radio"][value="card"]');
@@ -556,6 +697,7 @@
 	function clearBasket() {
 		state.cart = {};
 		state.spice = {};
+		state.code = null;
 		state.slot = null;
 		state.days = null;
 		save();
@@ -579,9 +721,13 @@
 	/* ------------------------------------------------------------ events */
 
 	document.addEventListener('click', function (e) {
-		var t = e.target.closest('[data-gm-inc],[data-gm-dec],[data-gm-day],[data-gm-slot],[data-gm-reorder],[data-gm-restart],[data-gm-release]');
+		var t = e.target.closest('[data-gm-inc],[data-gm-dec],[data-gm-remove],[data-gm-apply-code],[data-gm-day],[data-gm-slot],[data-gm-reorder],[data-gm-restart],[data-gm-release]');
 		if (!t) return;
-		if (t.hasAttribute('data-gm-inc')) {
+		if (t.hasAttribute('data-gm-remove')) {
+			removeItem(t.getAttribute('data-gm-remove'));
+		} else if (t.hasAttribute('data-gm-apply-code')) {
+			applyCode();
+		} else if (t.hasAttribute('data-gm-inc')) {
 			bump(t.getAttribute('data-gm-inc'), 1);
 			notice('');
 		} else if (t.hasAttribute('data-gm-dec')) {
@@ -608,6 +754,10 @@
 
 	document.addEventListener('input', function (e) {
 		if (e.target.name === 'postcode' && e.target.closest('[data-gm-pay]')) checkDelivery(e.target.value);
+		if (e.target.id === 'gm-discount' && state.code && e.target.value.trim().toUpperCase() !== state.code.code) {
+			state.code = null; // edited after applying: needs applying again
+			renderTotals();
+		}
 	});
 
 	document.addEventListener('change', function (e) {
@@ -801,6 +951,51 @@
 			location.replace(location.pathname);
 		}).catch(function () { location.href = link.href; });
 	});
+
+	document.addEventListener('keydown', function (e) {
+		if (e.key === 'Enter' && e.target.id === 'gm-discount') {
+			e.preventDefault();
+			applyCode();
+		}
+	});
+
+	/* ------------------------------------------------------------ swipe left to remove (touch screens) */
+
+	(function () {
+		var line = null, startX = 0, startY = 0, dx = 0, dragging = false;
+		document.addEventListener('touchstart', function (e) {
+			var l = e.target.closest('[data-gm-line]');
+			if (!l || e.target.closest('select,input')) return; // a plain tap on a button still works as a tap
+			line = l; startX = e.touches[0].clientX; startY = e.touches[0].clientY; dx = 0; dragging = false;
+		}, { passive: true });
+		document.addEventListener('touchmove', function (e) {
+			if (!line) return;
+			var x = e.touches[0].clientX - startX, y = e.touches[0].clientY - startY;
+			if (!dragging) {
+				if (Math.abs(y) > 10 && Math.abs(y) > Math.abs(x)) { line = null; return; } // scrolling, not swiping
+				if (Math.abs(x) < 10) return;
+				dragging = true;
+				line.classList.add('is-swiping');
+			}
+			dx = Math.min(0, x);
+			$('.gm-line__content', line).style.transform = 'translateX(' + dx + 'px)';
+			line.classList.toggle('is-armed', dx < -90);
+		}, { passive: true });
+		document.addEventListener('touchend', function () {
+			if (!line) return;
+			var l = line; line = null;
+			var content = $('.gm-line__content', l);
+			l.classList.remove('is-swiping');
+			if (dragging && dx < -90) {
+				content.style.transform = 'translateX(-110%)';
+				l.classList.add('is-removing');
+				setTimeout(function () { removeItem(l.getAttribute('data-gm-line')); }, 220);
+			} else {
+				content.style.transform = '';
+				l.classList.remove('is-armed');
+			}
+		});
+	})();
 
 	var payForm = $('[data-gm-pay]');
 	if (payForm) payForm.addEventListener('submit', submitOrder);

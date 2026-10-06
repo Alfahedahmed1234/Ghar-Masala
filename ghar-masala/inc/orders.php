@@ -173,6 +173,7 @@ function gm_order_ref( $id ) {
 function gm_set_status( $id, $status ) {
 	update_post_meta( $id, '_gm_status', $status );
 	if ( 'confirmed' === $status ) {
+		gm_count_discount_use( $id );
 		gm_send_order_emails( $id );
 	}
 }
@@ -209,6 +210,12 @@ function gm_order_summary( $id ) {
 		'total'       => gm_money( $total ),
 		'total_pence' => $total,
 		'discount'    => get_post_meta( $id, '_gm_discount', true ),
+		'discounts'   => array_map(
+			function ( $d ) {
+				return array( 'label' => $d['label'], 'amount' => '−' . gm_money( $d['pence'] ) );
+			},
+			(array) get_post_meta( $id, '_gm_discount_lines', true )
+		),
 	);
 }
 
@@ -315,11 +322,19 @@ function gm_create_order( array $data ) {
 		$customer['postcode'] = $delivery['postcode'];
 	}
 
+	// Discounts (on the food total). An invalid code stops the order so the
+	// customer isn't surprised by a bill without the saving they expected.
+	$discount = gm_apply_discounts( $total, $customer['discount'] );
+	if ( is_wp_error( $discount ) ) {
+		return $discount;
+	}
+	$off = $discount['pence'];
+
 	$payment = ( 'card' === ( $data['payment'] ?? '' ) && gm_stripe_enabled() ) ? 'card' : 'cod';
 	if ( 'cod' === $payment && ! gm_cod_enabled() ) {
 		return new WP_Error( 'gm_payment', 'Please pay by card.' );
 	}
-	if ( 'cod' === $payment && gm_cash_limit() && $total + $fee > gm_cash_limit() ) {
+	if ( 'cod' === $payment && gm_cash_limit() && $total - $off + $fee > gm_cash_limit() ) {
 		return new WP_Error(
 			'gm_payment_limit',
 			gm_stripe_enabled()
@@ -349,7 +364,10 @@ function gm_create_order( array $data ) {
 		'_gm_subtotal'  => $total,
 		'_gm_delivery'  => $fee,
 		'_gm_miles'     => $checked ? $delivery['miles'] : '',
-		'_gm_total'     => $total + $fee,
+		'_gm_total'     => $total - $off + $fee,
+		'_gm_discount_pence'   => $off,
+		'_gm_discount_lines'   => $discount['lines'],
+		'_gm_discount_code_id' => $discount['code'] ? $discount['code']['id'] : 0,
 		'_gm_user'      => get_current_user_id(),
 		'_gm_created'   => time(),
 	);
@@ -428,10 +446,11 @@ function gm_send_order_emails( $id ) {
 		}
 	}
 
-	$details = "Order {$o['ref']}\nDelivery: {$o['slot']}\n\n{$lines}\nSubtotal: {$o['subtotal']}\nDelivery charge: {$o['delivery']}\nTotal: {$o['total']} ({$paid})\n";
-	if ( $o['discount'] ) {
-		$details .= "Discount code entered: {$o['discount']}\n";
+	$discounts = '';
+	foreach ( $o['discounts'] as $d ) {
+		$discounts .= "Discount ({$d['label']}): {$d['amount']}\n";
 	}
+	$details = "Order {$o['ref']}\nDelivery: {$o['slot']}\n\n{$lines}\nSubtotal: {$o['subtotal']}\n{$discounts}Delivery charge: {$o['delivery']}\nTotal: {$o['total']} ({$paid})\n";
 
 	$kitchen = "New order!\n\n{$details}\nCustomer\n"
 		. $m( 'name' ) . "\n" . $m( 'address' ) . ', ' . $m( 'postcode' ) . "\n" . $m( 'phone' ) . "\n" . $m( 'email' ) . "\n";
@@ -514,6 +533,9 @@ function gm_render_order_box( $post ) {
 		<?php foreach ( $o['lines'] as $line ) : ?>
 			<tr><td><?php echo esc_html( $line['name'] ); ?></td><td><?php echo (int) $line['qty']; ?></td><td><?php echo esc_html( $line['note'] ); ?></td><td style="text-align:right"><?php echo esc_html( $line['total'] ); ?></td></tr>
 		<?php endforeach; ?>
+		<?php foreach ( $o['discounts'] as $d ) : ?>
+			<tr><td colspan="3">Discount — <?php echo esc_html( $d['label'] ); ?></td><td style="text-align:right"><?php echo esc_html( $d['amount'] ); ?></td></tr>
+		<?php endforeach; ?>
 		<tr><td colspan="3">Delivery</td><td style="text-align:right"><?php echo esc_html( $o['delivery'] ); ?></td></tr>
 		<tr><th colspan="3">Total</th><th style="text-align:right"><?php echo esc_html( $o['total'] ); ?></th></tr>
 		</tbody>
@@ -525,9 +547,6 @@ function gm_render_order_box( $post ) {
 		<a href="mailto:<?php echo esc_attr( $m( 'email' ) ); ?>"><?php echo esc_html( $m( 'email' ) ); ?></a></p>
 	<?php if ( $m( 'notes' ) ) : ?>
 		<p><strong>Allergy &amp; delivery notes:</strong><br><?php echo nl2br( esc_html( $m( 'notes' ) ) ); ?></p>
-	<?php endif; ?>
-	<?php if ( $o['discount'] ) : ?>
-		<p><strong>Discount code entered:</strong> <?php echo esc_html( $o['discount'] ); ?> <em>(not applied automatically — adjust the bill if valid)</em></p>
 	<?php endif; ?>
 	<p><strong>Payment:</strong> <?php echo 'card' === $o['payment'] ? 'Card / Apple Pay / Google Pay (Stripe)' : 'Cash on delivery'; ?>
 		<?php if ( $m( 'stripe_session' ) ) : ?> · Stripe session <code><?php echo esc_html( $m( 'stripe_session' ) ); ?></code><?php endif; ?></p>
