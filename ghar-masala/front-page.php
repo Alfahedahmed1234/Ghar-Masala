@@ -265,6 +265,7 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 					<div class="gm-key__diet">
 						<span class="gm-veg">V</span><span>Vegetarian</span>
 						<span class="gm-rec">Recommended</span><span>Our pick</span>
+						<span class="gm-new">New</span><span>Just added to the menu</span>
 					</div>
 					<p class="gm-small gm-muted">Vegan on request where the dish allows — ask when you order.</p>
 				</div>
@@ -290,9 +291,10 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 							<span class="gm-dish__info">
 								<span class="gm-dish__name"><?php echo esc_html( $item['name'] ); ?></span>
 								<?php $gm_dish_spice = gm_spice_levels()[ $item['spice'] ?? '' ] ?? null; ?>
-								<?php if ( ! empty( $item['rec'] ) || ! empty( $item['veg'] ) || ! empty( $item['adjustable'] ) || $gm_dish_spice ) : ?>
+								<?php if ( ! empty( $item['new'] ) || ! empty( $item['rec'] ) || ! empty( $item['veg'] ) || ! empty( $item['adjustable'] ) || $gm_dish_spice ) : ?>
 									<span class="gm-dish__meta">
 										<?php if ( $gm_dish_spice ) : ?><span class="gm-dish__spice" title="Standard spice level: <?php echo esc_attr( $gm_dish_spice['label'] ); ?>"><?php echo gm_spice_dots( $item['spice'] ); // phpcs:ignore WordPress.Security.EscapeOutput -- fixed markup. ?><?php echo esc_html( $gm_dish_spice['short'] ); ?></span><?php endif; ?>
+										<?php if ( ! empty( $item['new'] ) ) : ?><span class="gm-new">New</span><?php endif; ?>
 										<?php if ( ! empty( $item['rec'] ) ) : ?><span class="gm-rec">Recommended</span><?php endif; ?>
 										<?php if ( ! empty( $item['veg'] ) ) : ?><span class="gm-veg gm-veg--sm" title="Vegetarian">V</span><?php endif; ?>
 										<?php if ( ! empty( $item['adjustable'] ) ) : ?><span class="gm-dish__adj">spice to order</span><?php endif; ?>

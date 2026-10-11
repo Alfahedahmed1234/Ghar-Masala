@@ -89,7 +89,7 @@ function gm_distance_miles( array $a, array $b ) {
  *     message  string  Line to show the customer.
  * }
  */
-function gm_delivery_quote( $postcode ) {
+function gm_delivery_quote( $postcode, $code_rule = null ) {
 	$rules = gm_delivery_rules();
 	$to    = gm_postcode_lookup( $postcode );
 	if ( is_wp_error( $to ) ) {
@@ -109,6 +109,22 @@ function gm_delivery_quote( $postcode ) {
 		'ok'       => true,
 		'message'  => '',
 	);
+
+	// Friends & family codes can open up delivery beyond the usual area.
+	$extended = $miles > $rules['max_miles'] && is_array( $code_rule ) && ! empty( $code_rule['anywhere'] )
+		&& ( empty( $code_rule['any_miles'] ) || $miles <= (float) $code_rule['any_miles'] );
+	if ( $extended ) {
+		$quote['fee']      = ! empty( $code_rule['any_free'] ) ? 0 : (int) ceil( round( $miles - $rules['free_miles'], 2 ) ) * $rules['per_mile'];
+		$quote['extended'] = true;
+		$quote['message']  = sprintf(
+			'%s is %s miles away — %s (code %s lets you order from outside our usual area).',
+			$to['postcode'],
+			$shown,
+			$quote['fee'] ? gm_money( $quote['fee'] ) . ' delivery' : 'free delivery',
+			$code_rule['code']
+		);
+		return $quote;
+	}
 
 	if ( $miles > $rules['max_miles'] ) {
 		if ( (float) $shown <= $rules['max_miles'] ) {
@@ -164,7 +180,8 @@ add_action( 'rest_api_init', function () {
 			'args'                => array( 'postcode' => array( 'type' => 'string', 'required' => true ) ),
 			'callback'            => function ( WP_REST_Request $request ) {
 				do_action( 'litespeed_control_set_nocache', 'ghar masala delivery quote' );
-				$quote = gm_delivery_quote( $request['postcode'] );
+				$rule  = $request['code'] ? gm_find_discount_code( (string) $request['code'] ) : null;
+				$quote = gm_delivery_quote( $request['postcode'], $rule && $rule['anywhere'] ? $rule : null );
 				if ( is_wp_error( $quote ) ) {
 					$quote->add_data( array( 'status' => 'gm_postcode_unknown' === $quote->get_error_code() ? 422 : 503 ) );
 				}

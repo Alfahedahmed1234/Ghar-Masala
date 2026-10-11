@@ -82,6 +82,12 @@ For either type, set:
 - an optional **minimum spend** and **end date**
 - for codes, an optional **use limit** ("Used so far" counts confirmed orders)
 
+**Friends & family (outside the delivery area):** on a discount *code*, tick **Friends & family** to let anyone who uses it order from outside your normal delivery radius.
+- **Distance:** optionally limit it ("up to 10 miles"); 0 means any distance.
+- **Delivery charge:** choose the **normal charge** (free up to 2 miles, then £1 per extra mile) or **free delivery**.
+- **Discount:** can be 0 if the code is only for delivery. Keep the code private, and set a **Use limit** if you like.
+- **At checkout:** when the customer applies the code, their postcode is re-checked and the order is allowed. The code is checked again when the order is placed.
+
 **New customers only:** tick this to make a discount (automatic or code) first-order only.
 - At checkout the site checks the customer's **email, phone number and account** against past confirmed orders.
 - **Automatic:** applies by itself once a new customer enters their email or phone. The basket shows "First order with us? 15% off — added at checkout once you enter your email".
@@ -157,7 +163,7 @@ Text boxes understand `{hours}`, `{days}`, `{cutoff}`, `{window}`, `{phone}`, `{
 Manage it in **WP Admin → Menu**. Your original menu was copied in the first time the theme ran.
 
 - **Change a price or description:** go to **Menu → All dishes**, click the dish, edit it, then click **Update**.
-- **Add a dish:** click **Add dish**. Fill in the name (top box), the description (box below it), the **Price** and the **Section**. Tick any badges (Vegetarian, Recommended, "Spice to order"), set its **Allergens**, then click **Publish**.
+- **Add a dish:** click **Add dish**. Fill in the name (top box), the description (box below it), the **Price** and the **Section**. Tick any badges (Vegetarian, Recommended, **New** (green badge, untick when it is no longer new), "Spice to order"), set its **Allergens**, then click **Publish**.
 - **Take a dish off the menu:** switch it to **Draft** to hide it but keep it for later, or move it to the **Bin** to remove it. Customers can't order hidden dishes, even from an old basket or "Order again".
 - **Customers choosing spice:** dishes with "Spice to order" ticked get a **Spice** dropdown in the customer's basket (Standard, Slightly hot, Hot, Madras, Vindaloo). Madras and Vindaloo add 30p per dish, unless the dish is already Madras or Vindaloo as standard. The chosen level appears on the order, in the kitchen email and on the card payment.
 - **Standard spice level:** in the dish's **Standard spice level** box, pick Slightly hot, Hot, Madras or Vindaloo, the same scale as the menu's Spice levels key, or "Not spicy / not shown". The dish then shows the matching coloured squares next to its name. This sets how hot the dish is as standard and doesn't change the price. Customers can still ask for a different level in their notes.

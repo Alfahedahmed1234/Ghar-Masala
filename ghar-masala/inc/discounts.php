@@ -74,6 +74,10 @@ function gm_discount_rule( $post ) {
 		'active'  => 'publish' === $post->post_status,
 		'always'  => (bool) $m( 'always_stack' ), // e.g. review thank-you codes: combine with anything
 		'new'     => (bool) $m( 'new_only' ),     // first order only (checked by email, phone and account)
+		// Friends & family: lets the customer order from outside the delivery area.
+		'anywhere'  => 'code' === $m( 'kind' ) && (bool) $m( 'anywhere' ),
+		'any_miles' => max( 0, (float) $m( 'any_miles' ) ), // 0 = any distance
+		'any_free'  => (bool) $m( 'any_free' ),             // free delivery for these orders
 	);
 }
 
@@ -83,7 +87,7 @@ function gm_discount_rules( $kind ) {
 	$rules = array();
 	foreach ( get_posts( array( 'post_type' => 'gm_discount', 'post_status' => 'publish', 'posts_per_page' => -1 ) ) as $post ) {
 		$r = gm_discount_rule( $post );
-		if ( $r['kind'] !== $kind || $r['amount'] <= 0 ) {
+		if ( $r['kind'] !== $kind || ( $r['amount'] <= 0 && ! $r['anywhere'] ) ) {
 			continue;
 		}
 		if ( ( $r['expires'] && $r['expires'] < $today ) || ( $r['limit'] && $r['used'] >= $r['limit'] ) ) {
@@ -116,6 +120,7 @@ function gm_discount_public( array $r ) {
 		'min'    => $r['min'],
 		'always' => $r['always'],
 		'newOnly' => $r['new'],
+		'anywhere' => $r['anywhere'],
 	);
 }
 
@@ -215,6 +220,12 @@ function gm_apply_discounts( $subtotal, $code = '', $customer = null ) {
 
 	$out = array( 'pence' => 0, 'lines' => array(), 'code' => null, 'note' => '' );
 	$add = function ( $r, $v ) use ( &$out ) {
+		if ( $v <= 0 ) { // e.g. a friends & family code that only opens up delivery
+			if ( 'code' === $r['kind'] ) {
+				$out['code'] = $r;
+			}
+			return;
+		}
 		$out['lines'][] = array( 'label' => ( 'code' === $r['kind'] ? 'Code ' . $r['code'] . ': ' : '' ) . ( $r['label'] ? $r['label'] : gm_discount_offer( $r ) ), 'pence' => $v );
 		$out['pence']  += $v;
 		if ( 'code' === $r['kind'] ) {
@@ -222,7 +233,8 @@ function gm_apply_discounts( $subtotal, $code = '', $customer = null ) {
 		}
 	};
 
-	if ( $auto && $code_rule && ! gm_discount_stacking() && ! $code_rule['always'] ) {
+	// A code worth nothing (friends & family delivery only) never competes with the automatic offer.
+	if ( $auto && $code_rule && $code_v > 0 && ! gm_discount_stacking() && ! $code_rule['always'] ) {
 		// Not combinable: give the customer whichever saves them more.
 		if ( $code_v > $auto_v ) {
 			$add( $code_rule, $code_v );
@@ -330,6 +342,12 @@ function gm_render_discount_box( $post ) {
 			<p class="description">Food total needed before it applies. For automatic discounts the basket tells customers how much more to add.</p></td></tr>
 		<tr><th scope="row"><label for="gm-expires">Ends on</label></th>
 			<td><input type="date" id="gm-expires" name="gm_expires" value="<?php echo esc_attr( $m( 'expires' ) ); ?>"> <span class="description">Optional — last day it can be used.</span></td></tr>
+		<tr class="gm-code-only"><th scope="row">Delivery area</th>
+			<td><label><input type="checkbox" name="gm_anywhere" value="1" <?php checked( (bool) $m( 'anywhere' ) ); ?>> <strong>Friends &amp; family:</strong> let customers with this code order from <strong>outside</strong> the delivery area</label>
+			<p style="margin:8px 0 0 24px">Up to <input type="number" name="gm_any_miles" min="0" step="0.5" value="<?php echo esc_attr( $m( 'any_miles', '0' ) ); ?>" style="width:5em"> miles from the kitchen <span class="description">(0 = any distance)</span></p>
+			<p style="margin:6px 0 0 24px"><label><input type="radio" name="gm_any_free" value="0" <?php checked( ! $m( 'any_free' ) ); ?>> Normal delivery charge (free up to <?php echo esc_html( gm_number( gm_setting( 'free_miles' ) ) ); ?> miles, then <?php echo esc_html( gm_money( (int) round( (float) gm_setting( 'per_mile' ) * 100 ) ) ); ?> per extra mile)</label><br>
+			<label><input type="radio" name="gm_any_free" value="1" <?php checked( (bool) $m( 'any_free' ) ); ?>> Free delivery</label></p>
+			<p class="description">The discount can be 0 if the code is only for delivery. Keep the code private and set a <strong>Use limit</strong> if you like.</p></td></tr>
 		<tr><th scope="row">Who can use it</th>
 			<td><label><input type="checkbox" name="gm_new_only" value="1" <?php checked( (bool) $m( 'new_only' ) ); ?>> <strong>New customers only</strong> — first order only</label>
 			<p class="description">Checked against the email address, phone number and account on past confirmed orders. With <strong>Automatic</strong> it applies by itself at checkout once a new customer enters their details.</p></td></tr>
@@ -358,6 +376,9 @@ add_action( 'save_post_gm_discount', function ( $id ) {
 	update_post_meta( $id, '_gm_min_spend', max( 0, round( (float) ( $in['gm_min_spend'] ?? 0 ), 2 ) ) );
 	update_post_meta( $id, '_gm_limit', max( 0, (int) ( $in['gm_limit'] ?? 0 ) ) );
 	update_post_meta( $id, '_gm_new_only', empty( $in['gm_new_only'] ) ? 0 : 1 );
+	update_post_meta( $id, '_gm_anywhere', empty( $in['gm_anywhere'] ) ? 0 : 1 );
+	update_post_meta( $id, '_gm_any_miles', max( 0, round( (float) ( $in['gm_any_miles'] ?? 0 ), 1 ) ) );
+	update_post_meta( $id, '_gm_any_free', empty( $in['gm_any_free'] ) ? 0 : 1 );
 	$exp = (string) ( $in['gm_expires'] ?? '' );
 	update_post_meta( $id, '_gm_expires', preg_match( '/^\d{4}-\d{2}-\d{2}$/', $exp ) ? $exp : '' );
 	do_action( 'litespeed_purge_all' );
@@ -383,6 +404,9 @@ add_action( 'manage_gm_discount_posts_custom_column', function ( $col, $id ) {
 			echo 'auto' === $r['kind'] ? 'Automatic' : 'Code <code>' . esc_html( $r['code'] ) . '</code>';
 			if ( $r['new'] ) {
 				echo '<br><em>New customers only</em>';
+			}
+			if ( $r['anywhere'] ) {
+				echo '<br><em>Friends &amp; family: outside delivery area' . ( $r['any_miles'] ? ' (up to ' . esc_html( gm_number( $r['any_miles'] ) ) . ' miles)' : '' ) . ( $r['any_free'] ? ', free delivery' : '' ) . '</em>';
 			}
 			$banner = (int) get_post_meta( $id, '_gm_banner', true );
 			if ( $banner && 'gm_banner' === get_post_type( $banner ) && 'trash' !== get_post_status( $banner ) ) {

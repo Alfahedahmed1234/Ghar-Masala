@@ -330,7 +330,8 @@ function gm_create_order( array $data ) {
 
 	// Delivery charge. If postcodes.io is down the order still goes through,
 	// flagged so the kitchen checks the distance itself.
-	$delivery = gm_delivery_quote( $customer['postcode'] );
+	$code_rule = '' !== trim( $customer['discount'] ) ? gm_find_discount_code( $customer['discount'] ) : null;
+	$delivery  = gm_delivery_quote( $customer['postcode'], $code_rule && $code_rule['anywhere'] ? $code_rule : null );
 	if ( is_wp_error( $delivery ) && 'gm_postcode_unknown' === $delivery->get_error_code() ) {
 		return new WP_Error( 'gm_field_postcode', $delivery->get_error_message() );
 	}

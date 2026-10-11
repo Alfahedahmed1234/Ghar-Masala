@@ -137,10 +137,11 @@
 			else code = { rule: state.code, value: ruleValue(state.code, sub) };
 		}
 		var add = function (d, isCode) {
+			if (d.value <= 0) return; // e.g. a friends & family code that only opens up delivery
 			out.lines.push({ label: (isCode ? 'Code ' + d.rule.code + ': ' : '') + d.rule.label, pence: d.value });
 			out.pence += d.value;
 		};
-		if (auto && code && !DISC.stack && !code.rule.always) {
+		if (auto && code && code.value > 0 && !DISC.stack && !code.rule.always) {
 			if (code.value > auto.value) add(code, true);
 			else { add(auto, false); out.note = 'Discount codes can’t be combined with our automatic offer, so we’ve applied the better saving.'; }
 		} else {
@@ -752,10 +753,22 @@
 
 	function postcodeKey(v) { return String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
 
+	/** A friends & family code lets this customer order from outside the delivery area. */
+	function areaCode() {
+		return state.code && state.code.anywhere ? state.code.code : '';
+	}
+
+	/** Re-check the postcode when the applied code changes (it may open up delivery). */
+	function recheckDelivery() {
+		var pc = $('[data-gm-pay] [name="postcode"]');
+		if (pc && pc.value.trim()) checkDelivery(pc.value);
+	}
+
 	function checkDelivery(value) {
-		var key = postcodeKey(value);
+		var pcKey = postcodeKey(value);
+		var key = pcKey + '|' + areaCode();
 		clearTimeout(deliveryTimer);
-		if (!/^[A-Z]{1,2}[0-9][A-Z0-9]?[0-9][A-Z]{2}$/.test(key)) {
+		if (!/^[A-Z]{1,2}[0-9][A-Z0-9]?[0-9][A-Z]{2}$/.test(pcKey)) {
 			deliveryFor = '';
 			state.delivery = { status: 'idle' };
 			renderTotals();
@@ -769,7 +782,7 @@
 		state.delivery = { status: 'loading' };
 		renderTotals();
 		deliveryTimer = setTimeout(function () {
-			fetch(rest('delivery', 'postcode=' + encodeURIComponent(key)), { credentials: 'same-origin', cache: 'no-store' })
+			fetch(rest('delivery', 'postcode=' + encodeURIComponent(pcKey) + (areaCode() ? '&code=' + encodeURIComponent(areaCode()) : '')), { credentials: 'same-origin', cache: 'no-store' })
 				.then(function (r) { return r.json().then(function (body) { return { ok: r.ok, body: body }; }); })
 				.then(function (res) {
 					if (key !== deliveryFor) return; // the customer has typed something else since
@@ -798,7 +811,7 @@
 		if (!el) return;
 		if (text === undefined) {
 			var problem = state.code ? discounts(subtotal()).codeProblem : '';
-			text = problem || (state.code ? '✓ Code ' + state.code.code + ' applied — ' + state.code.offer : '');
+			text = problem || (state.code ? '✓ Code ' + state.code.code + ' applied' + (state.code.amount > 0 ? ' — ' + state.code.offer : '') + (state.code.anywhere ? (state.code.amount > 0 ? ', and' : ' —') + ' you can order from outside our usual delivery area' : '') : '');
 			bad = !!problem;
 		}
 		el.textContent = text;
@@ -813,6 +826,7 @@
 			state.code = null;
 			renderCodeMsg('');
 			renderTotals();
+			recheckDelivery();
 			return;
 		}
 		renderCodeMsg('Checking…', false);
@@ -825,10 +839,12 @@
 					state.code = null;
 					renderTotals();
 					renderCodeMsg(res.body.message || 'That code isn’t valid.', true);
+					recheckDelivery();
 					return;
 				}
 				state.code = res.body;
 				renderTotals();
+				recheckDelivery();
 			})
 			.catch(function () { renderCodeMsg('Could not check the code — please try again.', true); });
 	}
@@ -1042,6 +1058,7 @@
 		if (e.target.id === 'gm-discount' && state.code && e.target.value.trim().toUpperCase() !== state.code.code) {
 			state.code = null; // edited after applying: needs applying again
 			renderTotals();
+			recheckDelivery();
 		}
 	});
 

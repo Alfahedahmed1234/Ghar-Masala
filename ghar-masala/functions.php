@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'GM_VERSION', '1.14.0' );
+define( 'GM_VERSION', '1.15.0' );
 
 /** Cache-busting version: changes whenever the file does. */
 function gm_ver( $file ) {
@@ -94,6 +94,7 @@ add_action( 'wp_enqueue_scripts', function () {
 				'desc'       => $item['desc'] ?? '',
 				'veg'        => ! empty( $item['veg'] ),
 				'rec'        => ! empty( $item['rec'] ),
+				'new'        => ! empty( $item['new'] ),
 				'adjustable' => ! empty( $item['adjustable'] ),
 				'spice'      => (string) ( $item['spice'] ?? '' ),
 			);

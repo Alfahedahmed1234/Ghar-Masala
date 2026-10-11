@@ -3,7 +3,7 @@ Theme Name: Ghar Masala
 Theme URI: https://www.facebook.com/gharmasala
 Author: Ghar Masala Ltd
 Description: Pre-order home-style curry delivery for Tividale & Oldbury — menu, basket, bookable 15-minute delivery slots, checkout (pay on delivery or Stripe card payments), allergen table and customer accounts.
-Version: 1.14.0
+Version: 1.15.0
 Requires at least: 6.0
 Requires PHP: 7.4
 License: GNU General Public License v2 or later
@@ -373,6 +373,11 @@ section[id], div[id] { scroll-margin-top: 88px; }
 .gm-veg--sm { width: 17px; height: 17px; font-size: 10px; }
 .gm-rec {
 	flex: none; justify-self: start; padding: 2px 8px; background: var(--color-accent-2-500); color: var(--color-accent-2-900);
+	font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase; font-weight: 700;
+}
+
+.gm-new {
+	flex: none; justify-self: start; padding: 2px 8px; background: var(--color-accent); color: #fff;
 	font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase; font-weight: 700;
 }
 

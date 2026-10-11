@@ -164,6 +164,7 @@ function gm_dish_item( WP_Post $dish ) {
 		'desc'            => gm_plain( wp_strip_all_tags( $dish->post_content ) ),
 		'veg'             => (bool) get_post_meta( $dish->ID, '_gm_veg', true ),
 		'rec'             => (bool) get_post_meta( $dish->ID, '_gm_rec', true ),
+		'new'             => (bool) get_post_meta( $dish->ID, '_gm_new', true ),
 		'adjustable'      => (bool) get_post_meta( $dish->ID, '_gm_adjustable', true ),
 		'spice'           => (string) get_post_meta( $dish->ID, '_gm_spice', true ),
 		'allergens'       => is_array( $allergens ) ? $allergens : array(),
@@ -299,6 +300,7 @@ function gm_render_dish_box( $post ) {
 			<td>
 				<label><input type="checkbox" name="gm_veg" value="1" <?php checked( get_post_meta( $post->ID, '_gm_veg', true ) ); ?>> Vegetarian (V)</label><br>
 				<label><input type="checkbox" name="gm_rec" value="1" <?php checked( get_post_meta( $post->ID, '_gm_rec', true ) ); ?>> Recommended</label><br>
+				<label><input type="checkbox" name="gm_new" value="1" <?php checked( get_post_meta( $post->ID, '_gm_new', true ) ); ?>> New <span class="description">(green “New” badge — untick when it’s no longer new)</span></label><br>
 				<label><input type="checkbox" name="gm_adjustable" value="1" <?php checked( get_post_meta( $post->ID, '_gm_adjustable', true ) ); ?>> “Spice to order”</label>
 			</td></tr>
 	</table>
@@ -335,7 +337,7 @@ add_action( 'save_post_gm_dish', function ( $id ) {
 	update_post_meta( $id, '_gm_price', number_format( $price, 2, '.', '' ) );
 	$spice = isset( $_POST['gm_spice'] ) ? sanitize_key( $_POST['gm_spice'] ) : '';
 	update_post_meta( $id, '_gm_spice', isset( gm_spice_levels()[ $spice ] ) ? $spice : '' );
-	foreach ( array( 'veg', 'rec', 'adjustable', 'no_allergen_row' ) as $flag ) {
+	foreach ( array( 'veg', 'rec', 'new', 'adjustable', 'no_allergen_row' ) as $flag ) {
 		update_post_meta( $id, '_gm_' . $flag, empty( $_POST[ 'gm_' . $flag ] ) ? 0 : 1 );
 	}
 
@@ -378,7 +380,7 @@ add_action( 'manage_gm_dish_posts_custom_column', function ( $col, $id ) {
 		}
 	} elseif ( 'gm_badges' === $col ) {
 		$badges = array();
-		foreach ( array( 'veg' => 'V', 'rec' => 'Recommended', 'adjustable' => 'Spice to order' ) as $flag => $label ) {
+		foreach ( array( 'veg' => 'V', 'new' => 'New', 'rec' => 'Recommended', 'adjustable' => 'Spice to order' ) as $flag => $label ) {
 			if ( get_post_meta( $id, '_gm_' . $flag, true ) ) {
 				$badges[] = $label;
 			}
