@@ -277,13 +277,44 @@ function gm_create_order( array $data ) {
 		}
 		$extra = $level ? gm_spice_surcharge( $index[ $id ], $level ) : 0;
 
+		$spice_note = $level ? 'Spice: ' . $levels[ $level ]['short'] . ( $extra ? ' (+' . gm_money( $extra ) . ' each)' : '' ) : '';
+
+		// Meals: one drink per meal. Meals with the same drink share a line.
+		if ( ! empty( $index[ $id ]['meal'] ) && gm_meal_drinks() ) {
+			$drinks = gm_meal_drinks();
+			$picked = array_values( (array) ( $data['drinks'][ $id ] ?? array() ) );
+			$groups = array();
+			for ( $n = 0; $n < $qty; $n++ ) {
+				$key = sanitize_title( (string) ( $picked[ $n ] ?? '' ) );
+				if ( ! isset( $drinks[ $key ] ) ) {
+					return new WP_Error( 'gm_drink', 'Please choose a drink for each ' . $index[ $id ]['name'] . ' in your basket.' );
+				}
+				$groups[ $key ] = ( $groups[ $key ] ?? 0 ) + 1;
+			}
+			foreach ( $groups as $key => $n ) {
+				$d       = $drinks[ $key ];
+				$unit    = $index[ $id ]['pence'] + $extra + $d['extra_pence'];
+				$items[] = array(
+					'id'    => $id,
+					'name'  => $index[ $id ]['name'],
+					'qty'   => $n,
+					'pence' => $unit,
+					'spice' => $level,
+					'drink' => $d['name'],
+					'note'  => trim( 'Drink: ' . $d['name'] . ( $d['extra_pence'] ? ' (+' . gm_money( $d['extra_pence'] ) . ' each)' : '' ) . ( $spice_note ? ' · ' . $spice_note : '' ) ),
+				);
+				$total += $n * $unit;
+			}
+			continue;
+		}
+
 		$items[] = array(
 			'id'    => $id,
 			'name'  => $index[ $id ]['name'],
 			'qty'   => $qty,
 			'pence' => $index[ $id ]['pence'] + $extra,
 			'spice' => $level,
-			'note'  => $level ? 'Spice: ' . $levels[ $level ]['short'] . ( $extra ? ' (+' . gm_money( $extra ) . ' each)' : '' ) : '',
+			'note'  => $spice_note,
 		);
 		$total += $qty * ( $index[ $id ]['pence'] + $extra );
 	}

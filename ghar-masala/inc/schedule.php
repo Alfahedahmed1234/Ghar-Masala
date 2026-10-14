@@ -180,14 +180,62 @@ function gm_date_closed( $date ) {
 	return ! empty( gm_slot_overrides()[ $date ]['closed'] );
 }
 
-/** How many orders a slot can take on a date (0 = blocked). */
+/**
+ * The regular number of orders a slot takes on a given weekday: the weekly
+ * pattern if set for that day & time, otherwise "Orders per slot".
+ */
+function gm_slot_regular( $weekday, $time, $s = null ) {
+	$s = $s ? $s : gm_schedule();
+	$p = (array) ( $s['pattern'] ?? array() );
+	if ( isset( $p[ (int) $weekday ][ $time ] ) ) {
+		return max( 0, (int) $p[ (int) $weekday ][ $time ] );
+	}
+	return max( 0, (int) $s['capacity'] );
+}
+
+/** How many orders a slot can take on a date (0 = blocked): one-off change > weekly pattern > orders per slot. */
 function gm_slot_capacity( $date, $time ) {
 	$o = gm_slot_overrides();
 	if ( isset( $o[ $date ][ $time ] ) ) {
 		return max( 0, (int) $o[ $date ][ $time ] );
 	}
-	return max( 0, (int) gm_schedule()['capacity'] );
+	$day = DateTimeImmutable::createFromFormat( '!Y-m-d', $date, gm_tz() );
+	return gm_slot_regular( $day ? (int) $day->format( 'w' ) : 0, $time );
 }
+
+/**
+ * Once: earlier versions saved every box of the date grid, which froze the
+ * number of orders per slot. Drop those copies (the most common value in each
+ * day's row), keeping real one-off changes such as blocked slots.
+ */
+add_action( 'init', function () {
+	if ( get_option( 'gm_slot_fix_1' ) ) {
+		return;
+	}
+	update_option( 'gm_slot_fix_1', 1 );
+	$o = gm_slot_overrides();
+	foreach ( $o as $date => $row ) {
+		$cells = array_filter( (array) $row, function ( $v, $k ) { return 'closed' !== $k; }, ARRAY_FILTER_USE_BOTH );
+		if ( count( $cells ) < 2 ) {
+			continue;
+		}
+		$freq   = array_count_values( array_map( 'intval', $cells ) );
+		arsort( $freq );
+		$common = (int) array_key_first( $freq );
+		if ( $freq[ $common ] < 2 ) {
+			continue;
+		}
+		foreach ( $cells as $t => $v ) {
+			if ( (int) $v === $common ) {
+				unset( $o[ $date ][ $t ] );
+			}
+		}
+		if ( ! $o[ $date ] ) {
+			unset( $o[ $date ] );
+		}
+	}
+	update_option( 'gm_slot_overrides', $o );
+} );
 
 /* ---------------------------------------------------------------------------
  * Admin screen: Orders → Opening times & slots
@@ -218,21 +266,33 @@ add_action( 'admin_post_gm_save_schedule', function () {
 		'cutoff'       => max( 0, min( 23, (int) ( $in['cutoff'] ?? 19 ) ) ),
 		'capacity'     => max( 0, min( 50, (int) ( $in['capacity'] ?? 1 ) ) ),
 		'closed_dates' => sanitize_textarea_field( $in['closed_dates'] ?? '' ),
+		'pattern'      => array(),
 	);
 	if ( gm_minutes( $s['close'] ) <= gm_minutes( $s['open'] ) ) {
 		$s['close'] = gm_hhmm( min( 23 * 60 + 59, gm_minutes( $s['open'] ) + $s['every'] ) );
 	}
+	// Weekly pattern: only the boxes that differ from "Orders per slot".
+	foreach ( (array) ( $in['pattern'] ?? array() ) as $w => $cells ) {
+		if ( ! in_array( (int) $w, range( 0, 6 ), true ) ) {
+			continue;
+		}
+		foreach ( (array) $cells as $t => $cap ) {
+			if ( preg_match( '/^\d{2}:\d{2}$/', $t ) && '' !== trim( (string) $cap ) && (int) $cap !== $s['capacity'] ) {
+				$s['pattern'][ (int) $w ][ $t ] = max( 0, min( 50, (int) $cap ) );
+			}
+		}
+	}
 	update_option( 'gm_schedule', $s );
 
-	// Slot grid: keep only the cells that differ from the regular capacity.
-	$overrides = gm_slot_overrides();
+	// Slot grid: a filled-in box is a one-off change for that date; an empty box follows the regular numbers.
+	$overrides = ! empty( $in['clear_overrides'] ) ? array() : gm_slot_overrides();
 	$today     = gm_now()->format( 'Y-m-d' );
 	foreach ( array_keys( $overrides ) as $date ) {
 		if ( $date < $today ) {
 			unset( $overrides[ $date ] ); // Tidy away the past.
 		}
 	}
-	foreach ( (array) ( $in['grid'] ?? array() ) as $date => $cells ) {
+	foreach ( ! empty( $in['clear_overrides'] ) ? array() : (array) ( $in['grid'] ?? array() ) as $date => $cells ) {
 		if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) ) {
 			continue;
 		}
@@ -240,8 +300,9 @@ add_action( 'admin_post_gm_save_schedule', function () {
 		if ( ! empty( $cells['closed'] ) ) {
 			$row['closed'] = 1;
 		}
+		$day = DateTimeImmutable::createFromFormat( '!Y-m-d', $date, gm_tz() );
 		foreach ( (array) $cells as $t => $cap ) {
-			if ( preg_match( '/^\d{2}:\d{2}$/', $t ) && '' !== $cap && (int) $cap !== $s['capacity'] ) {
+			if ( preg_match( '/^\d{2}:\d{2}$/', $t ) && '' !== trim( (string) $cap ) && $day && (int) $cap !== gm_slot_regular( (int) $day->format( 'w' ), $t, $s ) ) {
 				$row[ $t ] = max( 0, min( 50, (int) $cap ) );
 			}
 		}
@@ -306,7 +367,7 @@ function gm_render_schedule_page() {
 					<p class="description">Currently: <?php echo esc_html( implode( ', ', array_map( 'gm_time_label', $starts ) ) ); ?></p></td></tr>
 				<tr><th scope="row"><label for="gm-capacity">Orders per slot</label></th>
 					<td><input type="number" id="gm-capacity" name="capacity" min="0" max="50" value="<?php echo (int) $s['capacity']; ?>" style="width:5em">
-					<p class="description">How many orders each slot can take as standard. Change individual slots in the grid below.</p></td></tr>
+					<p class="description">How many orders each slot can take as standard. Set different numbers for particular days and times in the <strong>weekly pattern</strong> below, or for a single date in the date grid.</p></td></tr>
 				<tr><th scope="row"><label for="gm-cutoff">Order deadline</label></th>
 					<td><select id="gm-cutoff" name="cutoff"><?php for ( $h = 0; $h <= 23; $h++ ) : ?><option value="<?php echo (int) $h; ?>" <?php selected( (int) $s['cutoff'], $h ); ?>><?php echo esc_html( gm_time_label( gm_hhmm( $h * 60 ), true ) ); ?></option><?php endfor; ?></select> the day before delivery</td></tr>
 				<tr><th scope="row"><label for="gm-closed">Closed dates</label></th>
@@ -314,8 +375,39 @@ function gm_render_schedule_page() {
 					<p class="description">Holidays and days off — one date per line (e.g. <code>25/12/2026</code>) or a range (<code>31/12/2026 - 02/01/2027</code>).</p></td></tr>
 			</table>
 
-			<h2>Delivery slots — next <?php echo (int) $ahead; ?> days</h2>
-			<p>Each box is how many orders that slot can take: raise it to take more, set <strong>0</strong> to block the time. Tick <strong>Closed</strong> to shut a whole day. Changes only affect that date; the regular times above stay as they are.</p>
+			<h2>Weekly pattern — orders per slot by day and time</h2>
+			<p>Set how many orders each time slot takes on each day of the week, every week. Leave a box <strong>empty</strong> to use “Orders per slot” (<?php echo (int) $s['capacity']; ?>); type <strong>0</strong> to never offer that time on that day.</p>
+			<?php if ( $starts ) : ?>
+			<div class="gm-scroll">
+				<table class="gm-grid">
+					<thead><tr><th>Day</th><?php foreach ( $starts as $t ) : ?><th><?php echo esc_html( gm_time_label( $t ) ); ?></th><?php endforeach; ?></tr></thead>
+					<tbody>
+					<?php
+					foreach ( array( 1, 2, 3, 4, 5, 6, 0 ) as $w ) :
+						$open_day = in_array( $w, array_map( 'intval', (array) $s['open_days'] ), true );
+						?>
+						<tr class="<?php echo $open_day ? '' : 'gm-off'; ?>">
+							<td><strong><?php echo esc_html( $names[ $w ] ); ?></strong><?php echo $open_day ? '' : '<br><small>Not a delivery day</small>'; ?></td>
+							<?php
+							foreach ( $starts as $t ) :
+								$set = isset( $s['pattern'][ $w ][ $t ] );
+								$val = $set ? (int) $s['pattern'][ $w ][ $t ] : '';
+								?>
+								<td class="<?php echo $set ? ( 0 === $val ? 'gm-blocked' : 'gm-changed' ) : ''; ?>">
+									<?php if ( $open_day ) : ?>
+										<input type="number" min="0" max="50" name="pattern[<?php echo (int) $w; ?>][<?php echo esc_attr( $t ); ?>]" value="<?php echo esc_attr( $val ); ?>" placeholder="<?php echo (int) $s['capacity']; ?>" aria-label="<?php echo esc_attr( $names[ $w ] . ' ' . gm_time_label( $t ) ); ?>">
+									<?php else : ?>—<?php endif; ?>
+								</td>
+							<?php endforeach; ?>
+						</tr>
+					<?php endforeach; ?>
+					</tbody>
+				</table>
+			</div>
+			<?php endif; ?>
+
+			<h2>One-off changes — next <?php echo (int) $ahead; ?> days</h2>
+			<p>Grey numbers are what each slot takes from the weekly pattern. Type a number to change just that date (more orders, or <strong>0</strong> to block it); clear the box to go back to the regular number. Tick <strong>Closed</strong> to shut a whole day.</p>
 			<?php if ( ! $starts ) : ?>
 				<p><em>Set opening and closing times above to see the slots.</em></p>
 			<?php else : ?>
@@ -338,10 +430,11 @@ function gm_render_schedule_page() {
 								$cap    = gm_slot_capacity( $date, $t );
 								$booked = (int) ( $counts[ $date ][ $t ] ?? 0 );
 								$class  = isset( $o[ $date ][ $t ] ) ? ( 0 === $cap ? 'gm-blocked' : 'gm-changed' ) : '';
+								$reg    = gm_slot_regular( (int) $day->format( 'w' ), $t );
 								?>
 								<td class="<?php echo esc_attr( $class ); ?>">
 									<?php if ( $regular ) : ?>
-										<input type="number" min="0" max="50" name="grid[<?php echo esc_attr( $date ); ?>][<?php echo esc_attr( $t ); ?>]" value="<?php echo (int) $cap; ?>" aria-label="<?php echo esc_attr( $day->format( 'D j M' ) . ' ' . gm_time_label( $t ) ); ?>">
+										<input type="number" min="0" max="50" name="grid[<?php echo esc_attr( $date ); ?>][<?php echo esc_attr( $t ); ?>]" value="<?php echo isset( $o[ $date ][ $t ] ) ? (int) $o[ $date ][ $t ] : ''; ?>" placeholder="<?php echo (int) $reg; ?>" aria-label="<?php echo esc_attr( $day->format( 'D j M' ) . ' ' . gm_time_label( $t ) ); ?>">
 									<?php else : ?>—<?php endif; ?>
 									<?php if ( $booked ) : ?><span class="gm-booked <?php echo $booked >= $cap ? 'gm-full' : ''; ?>"><?php echo (int) $booked; ?> booked</span><?php endif; ?>
 								</td>
@@ -352,6 +445,7 @@ function gm_render_schedule_page() {
 				</table>
 			</div>
 			<p class="description">Yellow = changed from the regular number; red = blocked.</p>
+			<p><label><input type="checkbox" name="clear_overrides" value="1"> Clear all one-off changes (every date goes back to the weekly pattern)</label></p>
 			<?php endif; ?>
 
 			<?php submit_button( 'Save opening times & slots' ); ?>

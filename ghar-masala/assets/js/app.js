@@ -24,6 +24,7 @@
 		view: 'home',
 		cart: {},
 		spice: {}, // id -> chosen spice level ('' = the dish's standard)
+		drinks: {}, // meal id -> [drink key per meal] (one drink each)
 		days: null,
 		day: null,
 		slot: null, // { date, time, label }
@@ -56,7 +57,7 @@
 	}
 
 	function save() {
-		try { localStorage.setItem(STORE_KEY, JSON.stringify({ cart: state.cart, spice: state.spice })); } catch (e) { /* private mode */ }
+		try { localStorage.setItem(STORE_KEY, JSON.stringify({ cart: state.cart, spice: state.spice, drinks: state.drinks })); } catch (e) { /* private mode */ }
 	}
 
 	function load() {
@@ -69,6 +70,9 @@
 				});
 				Object.keys(s.spice || {}).forEach(function (id) {
 					if (items[id] && items[id].adjustable && LEVELS[s.spice[id]]) state.spice[id] = s.spice[id];
+				});
+				Object.keys(s.drinks || {}).forEach(function (id) {
+					if (items[id] && items[id].meal && Array.isArray(s.drinks[id])) state.drinks[id] = s.drinks[id].map(function (k) { return DRINKS[k] ? k : ''; });
 				});
 			}
 		} catch (e) { /* ignore */ }
@@ -83,9 +87,48 @@
 
 	function unitPrice(id) { return items[id].price + surcharge(id); }
 
+	/* Meals: one drink each, chosen in the basket (Settings → Ghar Masala → Meal drinks). */
+	var DRINKS = {};
+	(C.mealDrinks || []).forEach(function (d) { DRINKS[d.key] = d; });
+	function isMeal(id) { return !!(items[id] && items[id].meal && Object.keys(DRINKS).length); }
+
+	/** The drink picked for each meal of this dish, one entry per meal ('' = not chosen yet). */
+	function drinksFor(id) {
+		var list = (state.drinks[id] || []).slice(0, state.cart[id] || 0);
+		while (list.length < (state.cart[id] || 0)) list.push('');
+		state.drinks[id] = list;
+		return list;
+	}
+
+	function drinksExtra(id) {
+		if (!isMeal(id)) return 0;
+		return drinksFor(id).reduce(function (sum, k) { return sum + (DRINKS[k] ? DRINKS[k].extra_pence : 0); }, 0);
+	}
+
+	function lineTotal(id) { return unitPrice(id) * state.cart[id] + drinksExtra(id); }
+
+	/** Name of the first meal still waiting for a drink, or ''. */
+	function missingDrink() {
+		var miss = Object.keys(state.cart).filter(function (id) { return isMeal(id) && drinksFor(id).indexOf('') !== -1; })[0];
+		return miss ? items[miss].name : '';
+	}
+
+	function drinkSelects(id) {
+		if (!isMeal(id)) return '';
+		var list = drinksFor(id);
+		return '<div class="gm-line__drinks">' + list.map(function (k, i) {
+			var opts = '<option value="">Choose a drink…</option>' + Object.keys(DRINKS).map(function (key) {
+				var d = DRINKS[key];
+				return '<option value="' + esc(key) + '"' + (k === key ? ' selected' : '') + '>' + esc(d.name) + (d.extra_pence ? ' (+' + money(d.extra_pence) + ')' : '') + '</option>';
+			}).join('');
+			return '<label class="gm-line__spice gm-line__drink' + (k ? '' : ' is-missing') + '"><span>' + (list.length > 1 ? 'Drink ' + (i + 1) : 'Drink') + '</span>' +
+				'<select class="input" data-gm-drink="' + esc(id) + '" data-gm-drink-i="' + i + '" aria-label="Drink ' + (i + 1) + ' for ' + esc(items[id].name) + '">' + opts + '</select></label>';
+		}).join('') + '</div>';
+	}
+
 	function subtotal() {
 		return Object.keys(state.cart).reduce(function (sum, id) {
-			return sum + unitPrice(id) * state.cart[id];
+			return sum + lineTotal(id);
 		}, 0);
 	}
 
@@ -198,6 +241,7 @@
 		if (next <= 0) {
 			delete state.cart[id];
 			delete state.spice[id];
+			delete state.drinks[id];
 		} else {
 			state.cart[id] = Math.min(next, 50);
 		}
@@ -369,16 +413,18 @@
 			'<div class="gm-line__content">' +
 			'<div class="gm-line__row">' +
 			'<span class="gm-line__name">' + esc(it.name) + '</span>' +
-			'<span class="gm-line__total gm-tnum">' + money(unitPrice(id) * state.cart[id]) + '</span>' +
+			'<span class="gm-line__total gm-tnum">' + money(lineTotal(id)) + '</span>' +
 			'<button type="button" class="gm-trash" data-gm-remove="' + esc(id) + '" aria-label="Remove ' + esc(it.name) + ' from your order" title="Remove">' + TRASH + '</button>' +
 			'</div>' +
 			'<div class="gm-line__row gm-line__row--controls">' + spiceSelect(id) + stepper(id) + '</div>' +
+			drinkSelects(id) +
 			'</div></div>';
 	}
 
 	function removeItem(id) {
 		delete state.cart[id];
 		delete state.spice[id];
+		delete state.drinks[id];
 		save();
 		renderCart();
 	}
@@ -675,6 +721,14 @@
 		var day = (state.days || []).filter(function (d) { return d.date === state.day; })[0];
 		var slot = day && day.slots.filter(function (s) { return s.time === time; })[0];
 		if (!slot) return;
+		var miss = missingDrink();
+		if (miss) {
+			notice('Please choose a drink for each ' + miss + ' in your basket before picking a slot.');
+			var sel = $('[data-gm-basket] .gm-line__drink.is-missing select');
+			if (sel) { sel.scrollIntoView({ block: 'center' }); sel.focus(); }
+			return;
+		}
+		notice('');
 		state.slot = { date: day.date, time: slot.time, label: day.long + ', ' + slot.window };
 		go('pay');
 	}
@@ -694,9 +748,13 @@
 			var it = items[id];
 			var level = LEVELS[state.spice[id]];
 			var note = level ? 'Spice: ' + level.short + (surcharge(id) ? ' (+' + money(surcharge(id)) + ' each)' : '') : '';
+			if (isMeal(id)) {
+				var dn = drinksFor(id).map(function (k) { return DRINKS[k] ? DRINKS[k].name + (DRINKS[k].extra_pence ? ' (+' + money(DRINKS[k].extra_pence) + ')' : '') : '?'; });
+				note = 'Drink' + (dn.length > 1 ? 's' : '') + ': ' + dn.join(', ') + (note ? ' · ' + note : '');
+			}
 			return '<div class="gm-sumline"><span><span>' + state.cart[id] + ' × ' + esc(it.name) + '</span>' +
 				(note ? '<small>' + esc(note) + '</small>' : '') +
-				'</span><span class="gm-tnum">' + money(unitPrice(id) * state.cart[id]) + '</span></div>';
+				'</span><span class="gm-tnum">' + money(lineTotal(id)) + '</span></div>';
 		}).join('') + '<div data-gm-totals></div>';
 
 		// Pre-fill from the customer's last order when signed in.
@@ -938,7 +996,7 @@
 			return;
 		}
 
-		var payload = { items: state.cart, spice: state.spice, date: state.slot.date, time: state.slot.time, payment: payMethod() };
+		var payload = { items: state.cart, spice: state.spice, drinks: state.drinks, date: state.slot.date, time: state.slot.time, payment: payMethod() };
 		payload.use_loyalty = !!(C.loyalty && C.loyalty.ready && state.useLoyalty && !discounts(subtotal()).loyaltyShort);
 		['name', 'email', 'address', 'postcode', 'phone', 'instructions', 'discount', 'website'].forEach(function (k) {
 			payload[k] = form.elements[k] ? form.elements[k].value.trim() : '';
@@ -995,6 +1053,7 @@
 	function clearBasket() {
 		state.cart = {};
 		state.spice = {};
+		state.drinks = {};
 		state.code = null;
 		state.slot = null;
 		state.days = null;
@@ -1041,6 +1100,7 @@
 			var cart = JSON.parse(t.getAttribute('data-gm-reorder'));
 			state.cart = {};
 			state.spice = {};
+			state.drinks = {};
 			Object.keys(cart).forEach(function (id) { if (items[id]) state.cart[id] = cart[id]; });
 			save();
 			renderCart();
@@ -1068,6 +1128,14 @@
 			state.useLoyalty = e.target.checked;
 			renderTotals();
 			renderCart();
+		}
+		var drinkFor = e.target.getAttribute && e.target.getAttribute('data-gm-drink');
+		if (drinkFor) {
+			drinksFor(drinkFor)[+e.target.getAttribute('data-gm-drink-i')] = DRINKS[e.target.value] ? e.target.value : '';
+			save();
+			renderCart();
+			if (!missingDrink()) notice('');
+			return;
 		}
 		var spiceFor = e.target.getAttribute && e.target.getAttribute('data-gm-spice');
 		if (spiceFor) {

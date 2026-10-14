@@ -165,6 +165,7 @@ function gm_dish_item( WP_Post $dish ) {
 		'veg'             => (bool) get_post_meta( $dish->ID, '_gm_veg', true ),
 		'rec'             => (bool) get_post_meta( $dish->ID, '_gm_rec', true ),
 		'new'             => (bool) get_post_meta( $dish->ID, '_gm_new', true ),
+		'meal'            => (bool) get_post_meta( $dish->ID, '_gm_meal', true ),
 		'adjustable'      => (bool) get_post_meta( $dish->ID, '_gm_adjustable', true ),
 		'spice'           => (string) get_post_meta( $dish->ID, '_gm_spice', true ),
 		'allergens'       => is_array( $allergens ) ? $allergens : array(),
@@ -217,6 +218,7 @@ add_action( 'init', function () {
 			update_post_meta( $id, '_gm_price', number_format( $item['price'], 2, '.', '' ) );
 			update_post_meta( $id, '_gm_veg', empty( $item['veg'] ) ? 0 : 1 );
 			update_post_meta( $id, '_gm_rec', empty( $item['rec'] ) ? 0 : 1 );
+			update_post_meta( $id, '_gm_meal', empty( $item['meal'] ) ? 0 : 1 );
 			update_post_meta( $id, '_gm_adjustable', empty( $item['adjustable'] ) ? 0 : 1 );
 			update_post_meta( $id, '_gm_allergens', $item['allergens'] ?? array() );
 			update_post_meta( $id, '_gm_no_allergen_row', empty( $item['no_allergen_row'] ) ? 0 : 1 );
@@ -301,7 +303,8 @@ function gm_render_dish_box( $post ) {
 				<label><input type="checkbox" name="gm_veg" value="1" <?php checked( get_post_meta( $post->ID, '_gm_veg', true ) ); ?>> Vegetarian (V)</label><br>
 				<label><input type="checkbox" name="gm_rec" value="1" <?php checked( get_post_meta( $post->ID, '_gm_rec', true ) ); ?>> Recommended</label><br>
 				<label><input type="checkbox" name="gm_new" value="1" <?php checked( get_post_meta( $post->ID, '_gm_new', true ) ); ?>> New <span class="description">(green “New” badge — untick when it’s no longer new)</span></label><br>
-				<label><input type="checkbox" name="gm_adjustable" value="1" <?php checked( get_post_meta( $post->ID, '_gm_adjustable', true ) ); ?>> “Spice to order”</label>
+				<label><input type="checkbox" name="gm_adjustable" value="1" <?php checked( get_post_meta( $post->ID, '_gm_adjustable', true ) ); ?>> “Spice to order”</label><br>
+				<label><input type="checkbox" name="gm_meal" value="1" <?php checked( get_post_meta( $post->ID, '_gm_meal', true ) ); ?>> Meal — customer picks a drink <span class="description">(drink choices are set in <a href="<?php echo esc_url( admin_url( 'options-general.php?page=ghar-masala#gm-drinks' ) ); ?>">Settings → Ghar Masala</a>)</span></label>
 			</td></tr>
 	</table>
 	<p class="description">Position within its section: set <strong>Order</strong> in the “Page Attributes” box (lowest first). To take a dish off the menu without deleting it, switch it to <strong>Draft</strong>.</p>
@@ -337,7 +340,7 @@ add_action( 'save_post_gm_dish', function ( $id ) {
 	update_post_meta( $id, '_gm_price', number_format( $price, 2, '.', '' ) );
 	$spice = isset( $_POST['gm_spice'] ) ? sanitize_key( $_POST['gm_spice'] ) : '';
 	update_post_meta( $id, '_gm_spice', isset( gm_spice_levels()[ $spice ] ) ? $spice : '' );
-	foreach ( array( 'veg', 'rec', 'new', 'adjustable', 'no_allergen_row' ) as $flag ) {
+	foreach ( array( 'veg', 'rec', 'new', 'meal', 'adjustable', 'no_allergen_row' ) as $flag ) {
 		update_post_meta( $id, '_gm_' . $flag, empty( $_POST[ 'gm_' . $flag ] ) ? 0 : 1 );
 	}
 
@@ -380,7 +383,7 @@ add_action( 'manage_gm_dish_posts_custom_column', function ( $col, $id ) {
 		}
 	} elseif ( 'gm_badges' === $col ) {
 		$badges = array();
-		foreach ( array( 'veg' => 'V', 'new' => 'New', 'rec' => 'Recommended', 'adjustable' => 'Spice to order' ) as $flag => $label ) {
+		foreach ( array( 'veg' => 'V', 'new' => 'New', 'rec' => 'Recommended', 'adjustable' => 'Spice to order', 'meal' => 'Meal + drink' ) as $flag => $label ) {
 			if ( get_post_meta( $id, '_gm_' . $flag, true ) ) {
 				$badges[] = $label;
 			}
@@ -580,3 +583,23 @@ function gm_render_allergen_admin() {
 	</div>
 	<?php
 }
+
+/** Once: dishes in the "English" section become meals (they come with a drink). */
+add_action( 'init', function () {
+	if ( get_option( 'gm_meal_seeded' ) || ! taxonomy_exists( 'gm_section' ) ) {
+		return;
+	}
+	update_option( 'gm_meal_seeded', 1 );
+	foreach ( get_terms( array( 'taxonomy' => 'gm_section', 'hide_empty' => false ) ) as $term ) {
+		if ( false === stripos( $term->name, 'english' ) ) {
+			continue;
+		}
+		$ids = get_posts( array( 'post_type' => 'gm_dish', 'post_status' => 'any', 'posts_per_page' => -1, 'fields' => 'ids', 'tax_query' => array( array( 'taxonomy' => 'gm_section', 'terms' => $term->term_id ) ) ) );
+		foreach ( $ids as $id ) {
+			if ( '' === get_post_meta( $id, '_gm_meal', true ) ) {
+				update_post_meta( $id, '_gm_meal', 1 );
+			}
+		}
+	}
+}, 30 );
+

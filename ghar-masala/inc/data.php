@@ -69,9 +69,9 @@ function gm_menu_seed() {
 			'title' => 'English',
 			'note'  => 'Served with chips & a can of drink',
 			'items' => array(
-				array( 'id' => 'filletBurger', 'name' => 'Chicken Fillet Burger (meal)', 'price' => 7.95, 'desc' => 'Crispy chicken fillet served in a soft brioche bun with fresh salad and mayo.', 'allergens' => array( 'gluten' => 'P' ) ),
-				array( 'id' => 'nuggets', 'name' => 'Chicken Nuggets & Chips', 'price' => 7.95, 'desc' => 'Golden, crunchy chicken nuggets and chips served with fresh salad.', 'allergens' => array( 'gluten' => 'P' ) ),
-				array( 'id' => 'fishChips', 'name' => 'Fish & Chips', 'price' => 7.95, 'desc' => 'Crispy battered cod served with a side of fresh salad.', 'allergens' => array( 'gluten' => 'Y' ) ),
+				array( 'id' => 'filletBurger', 'meal' => true, 'name' => 'Chicken Fillet Burger (meal)', 'price' => 7.95, 'desc' => 'Crispy chicken fillet served in a soft brioche bun with fresh salad and mayo.', 'allergens' => array( 'gluten' => 'P' ) ),
+				array( 'id' => 'nuggets', 'meal' => true, 'name' => 'Chicken Nuggets & Chips', 'price' => 7.95, 'desc' => 'Golden, crunchy chicken nuggets and chips served with fresh salad.', 'allergens' => array( 'gluten' => 'P' ) ),
+				array( 'id' => 'fishChips', 'meal' => true, 'name' => 'Fish & Chips', 'price' => 7.95, 'desc' => 'Crispy battered cod served with a side of fresh salad.', 'allergens' => array( 'gluten' => 'Y' ) ),
 			),
 		),
 		array(

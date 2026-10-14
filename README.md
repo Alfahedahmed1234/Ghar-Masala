@@ -46,11 +46,20 @@ Unlike the design prototype, this version takes real orders:
 
 - **Regular opening times:** tick your delivery days and set the opening and closing times, how often slots start (every 30 minutes, etc.), the delivery window length, how many orders each slot can take, and the order deadline (e.g. 7pm the day before). All the "Deliveries 6–10pm, Sunday to Thursday" wording across the site updates itself.
 - **Closed dates:** list holidays and days off, one per line (`25/12/2026`) or as a range (`31/12/2026 - 02/01/2027`).
-- **Slot grid (next 14 days):** each box is how many orders that slot can take on that date.
-  - Raise a box to take more orders at that time, or set it to **0** to block the time.
+- **Weekly pattern (day × time):** how many orders each time slot takes on each day of the week, every week. Leave a box empty to use "Orders per slot"; type **0** to never offer that time on that day.
+- **One-off changes (next 14 days):** the grey number in each box is what the slot takes from the weekly pattern.
+  - Type a number to change just that date (more orders, or **0** to block it). Clear the box to go back to the regular number.
   - Tick **Closed** to shut the whole day.
   - Booked counts appear in each box, so you can see what's taken.
-  - These changes only affect that date.
+  - "Clear all one-off changes" resets every date to the weekly pattern.
+- **Order of priority:** one-off change, then weekly pattern, then Orders per slot.
+
+## Meals with a drink
+
+Tick **Meal — customer picks a drink** on a dish in **WP Admin → Menu** (the English meals are ticked already).
+- **In the basket:** the customer picks one drink for each meal ("Drink 1", "Drink 2"…). They can't pick a slot until every meal has a drink.
+- **Orders:** kitchen emails, the order screen and Stripe show the drink with each meal.
+- **Drink list:** set in **Settings → Ghar Masala → Meal drinks**, one per line. Add `| 1.50` to charge extra, e.g. `J2O (orange & passion) | 1.50`.
 
 ## Customers (WP Admin → Customers)
 

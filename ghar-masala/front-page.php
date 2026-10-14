@@ -571,7 +571,7 @@ if ( $gm_signed_in ) :
 				$gm_reorder = array();
 				$gm_summary = array();
 				foreach ( $gm_order['lines'] as $line ) {
-					$gm_reorder[ $line['id'] ] = $line['qty'];
+					$gm_reorder[ $line['id'] ] = ( $gm_reorder[ $line['id'] ] ?? 0 ) + $line['qty'];
 					$gm_summary[]              = $line['qty'] . ' × ' . $line['name'];
 				}
 				?>

@@ -22,7 +22,34 @@ function gm_setting_defaults() {
 		'cash_limit'     => 100,
 		'stripe_secret'  => '',
 		'stripe_webhook' => '',
+		'meal_drinks'    => "Coke (can)\nCoke Zero (can)\nRubicon Mango (can)\nRubicon Passion (can)\nWater (bottle)\nJ2O (orange & passion) | 1.50",
 	);
+}
+
+/**
+ * Drinks a customer can pick with a meal (Settings → Ghar Masala → Meal drinks).
+ * One per line; "Name | 1.50" adds a charge.
+ *
+ * @return array[] [ [ 'key' => 'coke-can', 'name' => 'Coke (can)', 'extra_pence' => 0 ], … ]
+ */
+function gm_meal_drinks() {
+	$out = array();
+	foreach ( preg_split( '/\R/', (string) gm_setting( 'meal_drinks' ) ) as $line ) {
+		$parts = array_map( 'trim', explode( '|', $line, 2 ) );
+		if ( '' === $parts[0] ) {
+			continue;
+		}
+		$key = sanitize_title( $parts[0] );
+		if ( '' === $key || isset( $out[ $key ] ) ) {
+			continue;
+		}
+		$out[ $key ] = array(
+			'key'         => $key,
+			'name'        => $parts[0],
+			'extra_pence' => isset( $parts[1] ) ? max( 0, (int) round( (float) preg_replace( '/[^0-9.]/', '', $parts[1] ) * 100 ) ) : 0,
+		);
+	}
+	return $out;
 }
 
 function gm_setting( $key ) {
@@ -85,6 +112,7 @@ function gm_sanitize_settings( $input ) {
 		'cash_limit'     => max( 0, round( (float) ( $input['cash_limit'] ?? 100 ), 2 ) ),
 		'stripe_secret'  => sanitize_text_field( $input['stripe_secret'] ?? '' ),
 		'stripe_webhook' => sanitize_text_field( $input['stripe_webhook'] ?? '' ),
+		'meal_drinks'    => sanitize_textarea_field( $input['meal_drinks'] ?? gm_setting_defaults()['meal_drinks'] ),
 	);
 }
 
@@ -140,6 +168,13 @@ function gm_render_settings_page() {
 				<tr><th scope="row"><label for="gm-max">Furthest delivery</label></th>
 					<td><input type="number" min="0.5" step="0.1" id="gm-max" name="gm_settings[max_miles]" value="<?php echo esc_attr( $o['max_miles'] ); ?>" style="width:6em"> miles
 					<p class="description">Postcodes further away than this can't check out.</p></td></tr>
+			</table>
+
+			<h2 id="gm-drinks">Meal drinks</h2>
+			<table class="form-table" role="presentation">
+				<tr><th scope="row"><label for="gm-meal-drinks">Drinks with a meal</label></th>
+					<td><textarea id="gm-meal-drinks" name="gm_settings[meal_drinks]" rows="7" cols="40" class="code"><?php echo esc_textarea( $o['meal_drinks'] ); ?></textarea>
+					<p class="description">Customers pick one of these for each dish ticked as a <strong>Meal</strong> in Menu (e.g. the English meals). One drink per line. To charge extra, add <code>| 1.50</code> after the name, e.g. <code>J2O (orange &amp; passion) | 1.50</code>.</p></td></tr>
 			</table>
 
 			<h2 id="gm-card">Card payments (Stripe)</h2>

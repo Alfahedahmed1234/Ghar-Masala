@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'GM_VERSION', '1.15.0' );
+define( 'GM_VERSION', '1.16.0' );
 
 /** Cache-busting version: changes whenever the file does. */
 function gm_ver( $file ) {
@@ -95,6 +95,7 @@ add_action( 'wp_enqueue_scripts', function () {
 				'veg'        => ! empty( $item['veg'] ),
 				'rec'        => ! empty( $item['rec'] ),
 				'new'        => ! empty( $item['new'] ),
+				'meal'       => ! empty( $item['meal'] ),
 				'adjustable' => ! empty( $item['adjustable'] ),
 				'spice'      => (string) ( $item['spice'] ?? '' ),
 			);
@@ -135,6 +136,7 @@ add_action( 'wp_enqueue_scripts', function () {
 		),
 		'menu'      => $menu,
 		'spiceLevels' => gm_spice_levels(),
+		'mealDrinks'  => array_values( gm_meal_drinks() ),
 		'payments'  => array(
 			'card' => gm_stripe_enabled(),
 			'cod'  => gm_cod_enabled(),
