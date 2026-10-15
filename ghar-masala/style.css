@@ -3,7 +3,7 @@ Theme Name: Ghar Masala
 Theme URI: https://www.facebook.com/gharmasala
 Author: Ghar Masala Ltd
 Description: Pre-order home-style curry delivery for Tividale & Oldbury — menu, basket, bookable 15-minute delivery slots, checkout (pay on delivery or Stripe card payments), allergen table and customer accounts.
-Version: 1.16.0
+Version: 1.17.0
 Requires at least: 6.0
 Requires PHP: 7.4
 License: GNU General Public License v2 or later
@@ -979,6 +979,97 @@ body[data-gm-view="done"] .gm-countdown, body[data-gm-view="login"] .gm-countdow
 .gm-duo .gm-loyalty-promo__title { font-size: 16px; margin: 0 0 2px; }
 .gm-duo .gm-loyalty-promo__text { font-size: 13px; line-height: 1.45; }
 .gm-duo .gm-loyalty-promo__btn { justify-self: start; padding: 8px 14px; font-size: 13.5px; }
+
+/* ============================================= Seasonal themes (Customize → Ghar Masala → Seasonal theme) */
+
+.gm-fest-decor, .gm-fest-title, .gm-fest-text { display: none; }
+.gm-fest-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+.is-festive .gm-fest-decor { display: block; position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+.is-festive .gm-hero__bar { position: relative; z-index: 3; }
+.is-festive .gm-hero__body { position: relative; z-index: 2; }
+
+/* Colours per festival: lettering gradient (--f1…--f6), letter edge (--fe), glow (--fg), greeting (--ft). */
+.gm-fest--eid, .gm-fest--ramadan { --f1: #fffbe6; --f2: #ffe08a; --f3: #f2b938; --f4: #c98a12; --f5: #ffe7a0; --f6: #d99a1b; --fe: #9a6608; --fg: rgba(242,185,56,.6); --ft: #ffe7a3; }
+.gm-fest--diwali { --f1: #fff6d6; --f2: #ffd36b; --f3: #ff9d1c; --f4: #e2541b; --f5: #ffc34d; --f6: #d6336c; --fe: #8a1d3f; --fg: rgba(255,157,28,.6); --ft: #ffd9a0; }
+.gm-fest--christmas { --f1: #ffd3cf; --f2: #ff6b5e; --f3: #e3261c; --f4: #a3120c; --f5: #ff5a4f; --f6: #b5170f; --fe: #5e0905; --fg: rgba(255,255,255,.55); --ft: #fff3e8; }
+.gm-fest--newyear { --f1: #ffffff; --f2: #eef0f6; --f3: #c3c8d8; --f4: #8d93a8; --f5: #f4e3a6; --f6: #d9a730; --fe: #4b5066; --fg: rgba(255,243,196,.6); --ft: #f4ecd2; }
+.gm-fest--holi { --fe: rgba(0,0,0,.35); --fg: rgba(255,255,255,.5); --ft: #fff; }
+.gm-fest--valentine { --f1: #fff0f5; --f2: #ffb3cc; --f3: #ff4f8b; --f4: #c2185b; --f5: #ff8fb3; --f6: #d81b60; --fe: #7a0d36; --fg: rgba(255,79,139,.55); --ft: #ffd6e5; }
+
+/* Hanging decorations */
+.gm-fest-hang { position: absolute; top: 0; display: flex; flex-direction: column; align-items: center; transform-origin: top center; animation: gm-fest-sway 4.5s ease-in-out var(--d, 0s) infinite alternate; }
+.gm-fest-hang::before { content: ""; width: 1.5px; height: var(--len, 80px); background: linear-gradient(180deg, rgba(242,185,56,0), rgba(242,185,56,.85)); }
+.gm-fest--christmas .gm-fest-hang::before { background: linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,.8)); }
+.gm-fest-hang svg { display: block; margin-top: -2px; filter: drop-shadow(0 0 6px var(--fg)); }
+@keyframes gm-fest-sway { from { transform: rotate(-4deg); } to { transform: rotate(4deg); } }
+
+.gm-fest-twinkle { position: absolute; width: 6px; height: 6px; background: #ffe7a3; border-radius: 50%; box-shadow: 0 0 8px 3px var(--fg); animation: gm-fest-twinkle 2.6s ease-in-out var(--d, 0s) infinite; }
+@keyframes gm-fest-twinkle { 0%, 100% { opacity: .15; transform: scale(.6); } 50% { opacity: 1; transform: scale(1.2); } }
+
+/* Snow & confetti (falling), sparks & hearts (rising) */
+.gm-fest-fall, .gm-fest-rise { position: absolute; top: -4%; width: var(--s, 5px); height: var(--s, 5px); opacity: var(--o, .85); }
+.gm-fest-fall { border-radius: 50%; background: var(--c, #fff); box-shadow: 0 0 6px rgba(255,255,255,.6); animation: gm-fest-fall var(--t, 12s) linear var(--d, 0s) infinite; }
+@keyframes gm-fest-fall { from { top: -4%; transform: translateX(0); } to { top: 104%; transform: translateX(var(--x, 0)); } }
+.gm-fest-conf { height: calc(var(--s) * .45); border-radius: 1px; box-shadow: none; animation-name: gm-fest-conf; }
+@keyframes gm-fest-conf { from { top: -4%; transform: translateX(0) rotate(0); } to { top: 104%; transform: translateX(var(--x, 0)) rotate(900deg); } }
+.gm-fest-rise { width: auto; height: auto; animation: gm-fest-rise var(--t, 10s) linear var(--d, 0s) infinite; }
+@keyframes gm-fest-rise { 0% { top: 104%; transform: translateX(0); opacity: 0; } 10%, 75% { opacity: var(--o, .8); } 100% { top: -6%; transform: translateX(var(--x, 0)); opacity: 0; } }
+.gm-fest-ember { width: var(--s); height: var(--s); border-radius: 50%; background: #ffd36b; box-shadow: 0 0 6px 2px rgba(255,140,26,.85), 0 0 14px 4px rgba(255,90,0,.35); }
+.gm-fest-heart svg { display: block; filter: drop-shadow(0 0 6px rgba(255,79,139,.5)); }
+
+/* Fireworks */
+.gm-fest-burst { position: absolute; width: 0; height: 0; }
+.gm-fest-burst i { position: absolute; left: -5px; top: -1px; width: 10px; height: 2px; border-radius: 2px; background: var(--c); box-shadow: 0 0 6px var(--c); opacity: 0; transform: rotate(var(--a)) translateX(0); animation: gm-fest-burst 3.6s cubic-bezier(.15,.7,.3,1) var(--d, 0s) infinite; }
+@keyframes gm-fest-burst { 0% { opacity: 0; transform: rotate(var(--a)) translateX(0) scaleX(.4); } 4% { opacity: 1; } 45% { opacity: .9; transform: rotate(var(--a)) translateX(64px) scaleX(1); } 60%, 100% { opacity: 0; transform: rotate(var(--a)) translateX(78px) translateY(10px) scaleX(.3); } }
+
+/* Holi colour clouds */
+.gm-fest-powder { position: absolute; width: var(--s); height: var(--s); margin: calc(var(--s) / -2) 0 0 calc(var(--s) / -2); border-radius: 50%; background: radial-gradient(circle, var(--c) 0, transparent 66%); opacity: .4; mix-blend-mode: screen; animation: gm-fest-pulse 6s ease-in-out var(--d, 0s) infinite alternate; }
+@keyframes gm-fest-pulse { from { transform: scale(.8); opacity: .25; } to { transform: scale(1.15); opacity: .5; } }
+
+/* Diwali diyas along the bottom */
+.gm-fest-diyas { position: absolute; left: 0; right: 0; bottom: 8px; display: flex; justify-content: space-around; padding: 0 3%; }
+.gm-fest-diya { position: relative; }
+.gm-fest-diya::before { content: ""; position: absolute; left: 50%; top: 2px; width: 46px; height: 46px; margin-left: -23px; border-radius: 50%; background: radial-gradient(circle, rgba(255,190,70,.45), transparent 65%); animation: gm-fest-glow 1.8s ease-in-out var(--d, 0s) infinite alternate; }
+.gm-fest-diya svg { position: relative; display: block; }
+.gm-fest-flame { transform-box: fill-box; transform-origin: 50% 100%; animation: gm-fest-flicker .9s ease-in-out infinite alternate; }
+.gm-fest-diya:nth-child(2n) .gm-fest-flame { animation-duration: 1.15s; animation-delay: -.4s; }
+@keyframes gm-fest-flicker { 0% { transform: scale(1, 1) skewX(0); } 35% { transform: scale(.94, 1.08) skewX(-3deg); } 70% { transform: scale(1.04, .94) skewX(2deg); } 100% { transform: scale(.97, 1.04) skewX(-1deg); } }
+@keyframes gm-fest-glow { from { opacity: .6; transform: scale(.9); } to { opacity: 1; transform: scale(1.1); } }
+
+/* Balloon lettering */
+.is-festive .gm-fest-title { display: flex; align-items: center; justify-content: center; gap: clamp(6px, 1.4vw, 16px); margin: 0 0 6px; }
+.gm-fest-title__words { display: flex; flex-wrap: wrap; justify-content: center; column-gap: .3em; font-size: clamp(36px, 7.4vw, 96px); }
+.gm-fest-word { display: inline-flex; white-space: nowrap; align-items: flex-end; }
+.gm-fest-b {
+	display: inline-block; font-family: "Baloo 2", "Arial Rounded MT Bold", system-ui, sans-serif; font-weight: 800;
+	font-size: inherit; line-height: 1.02; letter-spacing: .01em;
+	background: linear-gradient(170deg, var(--f1) 0%, var(--f2) 18%, var(--f3) 42%, var(--f4) 64%, var(--f5) 82%, var(--f6) 100%);
+	-webkit-background-clip: text; background-clip: text; color: transparent;
+	-webkit-text-stroke: 1px rgba(255, 246, 214, .55);
+	filter: drop-shadow(0 2px 0 var(--fe)) drop-shadow(0 6px 10px rgba(0, 0, 0, .45));
+	transform: rotate(calc((var(--i) - 5) * 1.2deg));
+	animation: gm-fest-float 3.2s ease-in-out calc(var(--i) * -.27s) infinite alternate;
+}
+.gm-fest--christmas .gm-fest-b { -webkit-text-stroke: 1.5px rgba(255, 255, 255, .85); }
+.gm-fest--holi .gm-fest-b { --f1: #fff; --f5: #fff; -webkit-text-stroke: 1px rgba(255,255,255,.7); }
+.gm-fest--holi .gm-fest-b:nth-child(5n+1) { --f2: #ff8fbf; --f3: #ff3d8b; --f4: #c2185b; --f6: #ff3d8b; }
+.gm-fest--holi .gm-fest-b:nth-child(5n+2) { --f2: #fff08a; --f3: #ffd400; --f4: #e09b00; --f6: #ffc400; }
+.gm-fest--holi .gm-fest-b:nth-child(5n+3) { --f2: #9fe0ff; --f3: #1fb5ff; --f4: #0a6fbf; --f6: #1fb5ff; }
+.gm-fest--holi .gm-fest-b:nth-child(5n+4) { --f2: #a8f0c0; --f3: #2ed573; --f4: #128a45; --f6: #2ed573; }
+.gm-fest--holi .gm-fest-b:nth-child(5n+5) { --f2: #d8b8ff; --f3: #a55eea; --f4: #6c2bb0; --f6: #a55eea; }
+@keyframes gm-fest-float { from { translate: 0 -4px; } to { translate: 0 5px; } }
+.gm-fest-title__icon svg { display: block; width: clamp(28px, 4vw, 46px); height: auto; filter: drop-shadow(0 0 8px var(--fg)); animation: gm-fest-float 3.6s ease-in-out infinite alternate; }
+.gm-fest-title__icon--r svg { width: clamp(24px, 3.4vw, 40px); animation-delay: -1.2s; }
+.is-festive .gm-fest-text { display: block; margin: 0 0 clamp(18px, 2.6vw, 28px); font-size: clamp(14px, 1.5vw, 17px); color: var(--ft); letter-spacing: .02em; font-style: italic; }
+
+@media (max-width: 700px) {
+	.gm-fest-hang, .gm-fest-m { display: none; }
+	.gm-fest-diya svg { width: 32px; height: 32px; }
+}
+@media (prefers-reduced-motion: reduce) {
+	.gm-fest-hang, .gm-fest-twinkle, .gm-fest-b, .gm-fest-title__icon svg, .gm-fest-flame, .gm-fest-diya::before, .gm-fest-powder { animation: none; }
+	.gm-fest-fall, .gm-fest-rise, .gm-fest-burst { display: none; }
+}
 
 @media print {
 	.gm-topbar, .gm-footer, .gm-cta-row, .gm-view:not([data-view="allergens"]) { display: none !important; }

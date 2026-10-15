@@ -25,12 +25,14 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 <?php /* ===================================================== Home */ ?>
 <section class="gm-view" data-view="home">
 	<div class="gm-hero" style="background-image:linear-gradient(180deg,rgba(0,29,22,.8) 0%,rgba(0,29,22,.52) 45%,rgba(0,29,22,.8) 100%),url('<?php echo esc_url( gm_img( 'img_hero', 'hero.jpg' ) ); ?>')">
+		<?php gm_render_fest_decor(); ?>
 		<header class="gm-hero__bar">
 			<a class="gm-logo" href="<?php echo esc_url( gm_view_url() ); ?>"><img src="<?php echo esc_url( $gm_logo ); ?>" alt="Ghar Masala — tradition served with comfort" width="106" height="64"></a>
 			<?php get_template_part( 'template-parts/halal' ); ?>
 			<?php get_template_part( 'template-parts/nav', null, array( 'variant' => 'hero' ) ); ?>
 		</header>
 		<div class="gm-hero__body">
+			<?php gm_render_fest_title(); ?>
 			<span class="gm-hero__kicker"><?php echo gm_line( 'home_kicker' ); // phpcs:ignore ?></span>
 			<h1 class="gm-hero__title"><?php echo gm_line( 'home_title' ); // phpcs:ignore ?></h1>
 			<div class="gm-hero__ctas">

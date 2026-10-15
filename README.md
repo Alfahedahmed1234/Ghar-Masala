@@ -201,6 +201,22 @@ The News page shows a timeline of milestones, newest first.
 
 The Contact page shows your phone, email, website, delivery hours and social links, plus a message form. Name and contact number are required. Every message is emailed to the address in **Settings → Ghar Masala → Send new orders to** and is also saved in **WP Admin → Enquiries**, so nothing gets lost.
 
+## Seasonal themes (Appearance → Customize → Ghar Masala → Seasonal theme)
+
+Dress the home page up for a festival. Choose **Festival**, then **Show it**: Off, On now, or On between two dates (it switches itself on and off, even on cached pages). The rest of the site is unchanged.
+
+| Festival | Lettering | Decorations |
+|---|---|---|
+| Eid | Eid Mubarak (gold) | Hanging crescent moons & stars, twinkles |
+| Ramadan | Ramadan Kareem (gold) | Hanging lanterns, moons & stars |
+| Diwali | Happy Diwali (saffron/pink) | Hanging lanterns, flickering diyas along the bottom, rising sparks |
+| Christmas | Merry Christmas (red) | Falling snow, hanging baubles, tree & snowflake |
+| New Year | Happy New Year (silver/gold) | Fireworks, gold confetti, hanging stars |
+| Holi | Happy Holi (multicolour) | Colour clouds and confetti |
+| Valentine's | Happy Valentine's (pink) | Floating and hanging hearts |
+
+**Balloon lettering** and **Greeting underneath** can be changed; leave them empty for each festival's own wording, or type `-` in the greeting for none. On phones the hanging pieces are hidden so the logo and basket stay clear. Visitors who prefer reduced motion see still decorations.
+
 ## Local SEO (getting found on Google)
 
 The theme now:

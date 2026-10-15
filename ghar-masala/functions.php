@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'GM_VERSION', '1.16.0' );
+define( 'GM_VERSION', '1.17.0' );
 
 /** Cache-busting version: changes whenever the file does. */
 function gm_ver( $file ) {
@@ -42,6 +42,7 @@ require get_template_directory() . '/inc/banners.php';
 require get_template_directory() . '/inc/rewards.php';
 require get_template_directory() . '/inc/customizer.php';
 require get_template_directory() . '/inc/seo.php';
+require get_template_directory() . '/inc/seasonal.php';
 require get_template_directory() . '/inc/delivery.php';
 require get_template_directory() . '/inc/accounts.php';
 require get_template_directory() . '/inc/testimonials.php';
