@@ -7,7 +7,7 @@
 
 	var C = window.GM_CONFIG || {};
 	var STORE_KEY = 'gm_basket_v1';
-	var VIEWS = ['home', 'menu', 'how', 'story', 'reviews', 'news', 'contact', 'faq', 'allergens', 'login', 'account', 'pay', 'done'];
+	var VIEWS = ['home', 'area', 'menu', 'how', 'story', 'reviews', 'news', 'contact', 'faq', 'allergens', 'login', 'account', 'pay', 'done'];
 	var ALIASES = { testimonials: 'reviews' };
 	var LEVELS = C.spiceLevels || {};
 	var CAN_HOVER = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
@@ -342,7 +342,7 @@
 			li.classList.toggle('is-current', !!li.querySelector('[aria-current="page"]'));
 		});
 
-		var titles = { home: '', menu: 'Menu', how: 'How it works', story: 'My story', reviews: 'Reviews', news: 'News', contact: 'Contact us', faq: 'FAQs', allergens: 'Allergens', login: 'Sign in', account: 'My account', pay: 'Checkout', done: 'Order confirmed' };
+		var titles = { home: '', area: '', menu: 'Menu', how: 'How it works', story: 'My story', reviews: 'Reviews', news: 'News', contact: 'Contact us', faq: 'FAQs', allergens: 'Allergens', login: 'Sign in', account: 'My account', pay: 'Checkout', done: 'Order confirmed' };
 		if (!show.firstTitle) show.firstTitle = document.title;
 		var first = C.startView || 'home';
 		document.title = view === first ? show.firstTitle : (titles[view] ? titles[view] + ' — Ghar Masala' : 'Ghar Masala');

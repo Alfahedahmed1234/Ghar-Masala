@@ -23,7 +23,7 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 <main id="gm-main">
 
 <?php /* ===================================================== Home */ ?>
-<section class="gm-view" data-view="home">
+<section class="gm-view" data-view="home"<?php gm_view_hidden( 'home' ); ?>>
 	<div class="gm-hero" style="background-image:linear-gradient(180deg,rgba(0,29,22,.8) 0%,rgba(0,29,22,.52) 45%,rgba(0,29,22,.8) 100%),url('<?php echo esc_url( gm_img( 'img_hero', 'hero.jpg' ) ); ?>')">
 		<?php gm_render_fest_decor(); ?>
 		<header class="gm-hero__bar">
@@ -33,8 +33,7 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 		</header>
 		<div class="gm-hero__body">
 			<?php gm_render_fest_title(); ?>
-			<span class="gm-hero__kicker"><?php echo gm_line( 'home_kicker' ); // phpcs:ignore ?></span>
-			<h1 class="gm-hero__title"><?php echo gm_line( 'home_title' ); // phpcs:ignore ?></h1>
+			<h1 class="gm-hero__h1"><span class="gm-hero__kicker"><?php echo gm_line( 'home_kicker' ); // phpcs:ignore ?></span> <span class="gm-hero__title"><?php echo gm_line( 'home_title' ); // phpcs:ignore ?></span></h1>
 			<div class="gm-hero__ctas">
 				<a class="gm-hero__cta gm-hero__cta--main" href="#menu">Order now</a>
 				<a class="gm-hero__cta" href="#how">How it works</a>
@@ -49,7 +48,7 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 				<p class="gm-local__text"><?php echo esc_html( gm_seo_fill( wp_strip_all_tags( gm_mod( 'local_text' ) ) ) ); ?></p>
 				<?php if ( gm_seo_areas() ) : ?>
 					<ul class="gm-local__areas" aria-label="Areas we deliver to">
-						<?php foreach ( gm_seo_areas() as $gm_area ) : ?><li><?php echo esc_html( $gm_area ); ?></li><?php endforeach; ?>
+						<?php foreach ( gm_seo_areas() as $gm_area ) : ?><li><?php if ( isset( gm_areas()[ sanitize_title( $gm_area ) ] ) ) : ?><a href="<?php echo esc_url( gm_area_url( sanitize_title( $gm_area ) ) ); ?>" title="Indian takeaway in <?php echo esc_attr( $gm_area ); ?>"><?php echo esc_html( $gm_area ); ?></a><?php else : ?><?php echo esc_html( $gm_area ); ?><?php endif; ?></li><?php endforeach; ?>
 					</ul>
 				<?php endif; ?>
 			</div>
@@ -59,8 +58,10 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 	<div class="gm-wrap"><?php gm_render_loyalty_promo( 'home' ); ?></div>
 </section>
 
+<?php gm_render_area_view(); ?>
+
 <?php /* ===================================================== My story */ ?>
-<section class="gm-view" data-view="story" hidden>
+<section class="gm-view" data-view="story"<?php gm_view_hidden( 'story' ); ?>>
 	<div class="gm-wrap gm-page-head">
 		<span class="gm-eyebrow">My story</span>
 		<h1 class="gm-title" style="max-width:20ch"><?php echo gm_line( 'story_title' ); // phpcs:ignore ?></h1>
@@ -92,7 +93,7 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 </section>
 
 <?php /* ===================================================== Reviews */ ?>
-<section class="gm-view" data-view="reviews" hidden>
+<section class="gm-view" data-view="reviews"<?php gm_view_hidden( 'reviews' ); ?>>
 	<div class="gm-wrap gm-page">
 		<h1 class="gm-title">Reviews</h1>
 		<?php
@@ -138,6 +139,7 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 
 		<div class="gm-cta-row" data-gm-review-cta>
 			<button type="button" class="gm-btn" data-gm-open-review>Leave a review</button>
+			<?php if ( gm_google_review_url() ) : ?><a class="gm-btn-outline gm-btn-outline--lg gm-google-review" href="<?php echo esc_url( gm_google_review_url() ); ?>" target="_blank" rel="noopener">★ Review us on Google</a><?php endif; ?>
 		</div>
 		<div class="gm-review" data-gm-review-box hidden>
 			<h2 class="gm-subtitle">Leave a review</h2>
@@ -166,7 +168,7 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 </section>
 
 <?php /* ===================================================== News */ ?>
-<section class="gm-view" data-view="news" hidden>
+<section class="gm-view" data-view="news"<?php gm_view_hidden( 'news' ); ?>>
 	<div class="gm-wrap gm-page">
 		<h1 class="gm-title">News</h1>
 		<p class="gm-lede">The Ghar Masala story so far — milestones and updates from the kitchen.</p>
@@ -191,7 +193,7 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 </section>
 
 <?php /* ===================================================== Contact */ ?>
-<section class="gm-view" data-view="contact" hidden>
+<section class="gm-view" data-view="contact"<?php gm_view_hidden( 'contact' ); ?>>
 	<div class="gm-wrap gm-page">
 		<h1 class="gm-title">Contact us</h1>
 		<div class="gm-lede"><?php echo gm_paras( 'contact_intro' ); // phpcs:ignore ?></div>
@@ -225,7 +227,7 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 </section>
 
 <?php /* ===================================================== FAQs */ ?>
-<section class="gm-view" data-view="faq" hidden>
+<section class="gm-view" data-view="faq"<?php gm_view_hidden( 'faq' ); ?>>
 	<div class="gm-wrap gm-page">
 		<h1 class="gm-title">Frequently asked questions</h1>
 		<p class="gm-lede">Can't find what you need? Ring the kitchen on <a href="<?php echo esc_attr( $gm_tel ); ?>"><?php echo esc_html( $gm_phone ); ?></a>.</p>
@@ -244,7 +246,7 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 </section>
 
 <?php /* ===================================================== Menu + order */ ?>
-<section class="gm-view" data-view="menu" hidden>
+<section class="gm-view" data-view="menu"<?php gm_view_hidden( 'menu' ); ?>>
 	<div class="gm-wrap gm-page">
 		<h1 class="gm-title">Menu</h1>
 		<p class="gm-lede">Curries marked “spice to order” can be made as hot as you like — choose the spice level in your basket. Madras and Vindaloo are 30p extra.</p>
@@ -340,7 +342,7 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 </section>
 
 <?php /* ===================================================== How it works */ ?>
-<section class="gm-view" data-view="how" hidden>
+<section class="gm-view" data-view="how"<?php gm_view_hidden( 'how' ); ?>>
 	<div class="gm-wrap gm-page">
 		<h1 class="gm-title" style="max-width:24ch">How ordering works</h1>
 		<div class="gm-lede"><?php echo gm_paras( 'how_intro' ); // phpcs:ignore ?></div>
@@ -394,7 +396,7 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 </section>
 
 <?php /* ===================================================== Allergens */ ?>
-<section class="gm-view" data-view="allergens" hidden>
+<section class="gm-view" data-view="allergens"<?php gm_view_hidden( 'allergens' ); ?>>
 	<div class="gm-wrap gm-page">
 		<h1 class="gm-title" style="max-width:22ch">Allergen information</h1>
 		<p class="gm-lede">The table lists the fourteen declarable allergens against every dish on our menu. If anything is unclear, add a note at checkout or ring the kitchen on <a href="<?php echo esc_attr( $gm_tel ); ?>"><?php echo esc_html( $gm_phone ); ?></a> before you order.</p>
@@ -454,7 +456,7 @@ $gm_every     = (int) gm_schedule()['every'];          // e.g. 30
 
 <?php /* ===================================================== Sign in */ ?>
 <?php if ( ! $gm_signed_in ) : ?>
-<section class="gm-view" data-view="login" hidden>
+<section class="gm-view" data-view="login"<?php gm_view_hidden( 'login' ); ?>>
 	<header class="gm-slimbar">
 		<div class="gm-slimbar__inner">
 			<a class="gm-logo" href="#"><img src="<?php echo esc_url( $gm_logo ); ?>" alt="Ghar Masala" width="76" height="46"></a>
@@ -547,7 +549,7 @@ if ( $gm_signed_in ) :
 		$gm_spent += $gm_order['total_pence'];
 	}
 	?>
-<section class="gm-view" data-view="account" hidden>
+<section class="gm-view" data-view="account"<?php gm_view_hidden( 'account' ); ?>>
 	<header class="gm-slimbar">
 		<div class="gm-slimbar__inner gm-slimbar__inner--wide">
 			<a class="gm-logo" href="#"><img src="<?php echo esc_url( $gm_logo ); ?>" alt="Ghar Masala" width="76" height="46"></a>
@@ -610,7 +612,7 @@ if ( $gm_signed_in ) :
 <?php endif; ?>
 
 <?php /* ===================================================== Checkout */ ?>
-<section class="gm-view" data-view="pay" hidden>
+<section class="gm-view" data-view="pay"<?php gm_view_hidden( 'pay' ); ?>>
 	<header class="gm-slimbar">
 		<div class="gm-slimbar__inner">
 			<img src="<?php echo esc_url( $gm_logo ); ?>" alt="Ghar Masala" width="76" height="46">
@@ -672,7 +674,7 @@ if ( $gm_signed_in ) :
 </section>
 
 <?php /* ===================================================== Confirmed */ ?>
-<section class="gm-view" data-view="done" hidden>
+<section class="gm-view" data-view="done"<?php gm_view_hidden( 'done' ); ?>>
 	<header class="gm-slimbar">
 		<div class="gm-slimbar__inner">
 			<img src="<?php echo esc_url( $gm_logo ); ?>" alt="Ghar Masala" width="76" height="46">
@@ -690,6 +692,7 @@ if ( $gm_signed_in ) :
 			<p class="gm-review-invite__title">Enjoy your food? Tell us what you thought.</p>
 			<p class="gm-small"><?php echo gm_review_reward()['enabled'] ? esc_html( sprintf( 'Leave a review once you’ve eaten — your first one earns you %s%% off your next order.', gm_num( (float) gm_review_reward()['percent'] ) ) ) : 'Leave a review once you’ve eaten — it really helps a small kitchen like ours.'; ?></p>
 			<a class="gm-btn" href="#write-review">Leave a review</a>
+			<?php if ( gm_google_review_url() ) : ?><a class="gm-btn-outline gm-btn-outline--lg gm-google-review" href="<?php echo esc_url( gm_google_review_url() ); ?>" target="_blank" rel="noopener">★ Review us on Google</a><?php endif; ?>
 		</div>
 		<a class="gm-btn-outline gm-btn-outline--lg" href="#" data-gm-restart style="margin-top:32px">Back to the site</a>
 	</div>

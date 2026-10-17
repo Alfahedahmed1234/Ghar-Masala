@@ -233,6 +233,26 @@ Outside the website:
 3. **Settings → Reading:** make sure "Discourage search engines from indexing this site" is **unticked**.
 4. Ask happy customers for **Google reviews**, and list the business with the same name and phone number on Just Eat/Deliveroo, Yell, Facebook and Nextdoor.
 
+
+### Area pages (v1.18)
+
+Every area in **Customize → Ghar Masala → Search engines → Areas you deliver to** gets its own page, e.g. `/indian-takeaway-oldbury/` and `/indian-takeaway-tividale/`. Each one has the heading "Indian Takeaway in Oldbury", its own Google title and description, the delivery rules and postcode checker, popular dishes (your "Recommended" dishes), reviews (ones that mention that area first), local delivery questions and links to the other areas. They are in the sitemap and linked from the home page area list and the footer. Adding or removing an area adds or removes its page.
+
+**Make them your own:** Customize → Ghar Masala → **Area pages (Google)** has a box for each area. A few sentences in your own words (which estate you deliver to most, a regular's favourite dish, how long it takes to get there) make each page unique, which is what Google rewards.
+
+### Google settings (Customize → Ghar Masala → Search engines)
+
+* **Google Business Profile link**: links the website and your Maps listing as the same business.
+* **Google review link**: adds a "Review us on Google" button after ordering and on the Reviews page.
+* **Google Search Console code**: paste the HTML tag to verify the site, then submit `https://ghar-masala.co.uk/wp-sitemap.xml`.
+
+### Off the website (these matter most for the map results)
+
+1. **Google Business Profile**: primary category *Indian takeaway* (extra: *Bangladeshi restaurant*, *Halal restaurant*, *Delivery restaurant*); set it as a service-area business listing Tividale, Oldbury, Tipton, Dudley Port, Great Bridge, Rowley Regis; add opening hours, the menu, 10+ real food photos, and post weekly.
+2. **Google reviews**: ask every happy customer (the review link, a card in the bag, a WhatsApp message). Reply to every review, naming the dish and area naturally.
+3. **Same name, phone and area everywhere**: Facebook, Instagram, Bing Places, Apple Business Connect, Yell, Thomson Local, Just Eat/Deliveroo/Uber Eats if used.
+4. **Local links**: Tividale/Oldbury Facebook groups, local news, schools, mosques and community events you cater for.
+
 ## Rebuilding the zip
 
 ```sh

@@ -43,6 +43,11 @@ $gm_email = gm_setting( 'email' );
 		</div>
 	</div>
 	<div class="gm-footer__legal">
+		<?php if ( gm_areas() ) : ?>
+			<p class="gm-footer__areas">Indian takeaway delivering to
+				<?php $gm_links = array(); foreach ( gm_areas() as $gm_s => $gm_n ) { $gm_links[] = '<a href="' . esc_url( gm_area_url( $gm_s ) ) . '">' . esc_html( $gm_n ) . '</a>'; } echo implode( ' · ', $gm_links ); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped above. ?>
+			</p>
+		<?php endif; ?>
 		<p class="gm-allergen-note"><?php echo gm_allergen_note(); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped in gm_allergen_note(). ?></p>
 		<p>© <?php echo esc_html( gmdate( 'Y' ) ); ?> Ghar Masala Ltd · company no. 16189818 · Tividale, Oldbury B69 · <?php echo esc_html( lcfirst( rtrim( gm_delivery_summary(), '.' ) ) ); ?></p>
 	</div>

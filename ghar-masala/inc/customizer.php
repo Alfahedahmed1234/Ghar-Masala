@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 function gm_mod_defaults() {
 	return array(
 		// Home
-		'home_kicker'      => 'Tividale · Oldbury · Fresh to order',
+		'home_kicker'      => 'Indian takeaway · Tividale & Oldbury · Fresh to order',
 		'home_title'       => 'Good food starts in the Kitchen.',
 		'img_hero'         => '',
 		// Countdown & welcome
@@ -29,8 +29,11 @@ function gm_mod_defaults() {
 		'checker_title'    => 'Do we deliver to you?',
 		'checker_out'      => 'We don’t usually deliver that far — but get in touch and we’ll see if we can arrange something.',
 		// Search engines (local SEO)
-		'seo_title'        => 'Ghar Masala | Home-Cooked Indian & Bangladeshi Curry Delivery in Tividale & Oldbury',
-		'seo_description'  => 'Fresh, home-style Indian and Bangladeshi curries cooked to order and delivered across {areas}. Halal, no base sauce, free delivery within 2 miles. Pre-order online.',
+		'seo_title'        => 'Indian Takeaway in Tividale & Oldbury | Ghar Masala Home-Cooked Curry',
+		'seo_description'  => 'Indian takeaway delivering home-cooked Indian & Bangladeshi curries across {areas}. Cooked fresh on the day, halal, no base sauce, free delivery within 2 miles.',
+		'seo_gsc'          => '',
+		'seo_gbp'          => '',
+		'seo_review'       => '',
 		'seo_town'         => 'Tividale',
 		'seo_areas'        => 'Tividale, Oldbury, Tipton, Dudley Port, Great Bridge, Rowley Regis, Burnt Tree',
 		'seo_cuisine'      => 'Indian, Bangladeshi, Curry, Halal',
@@ -213,6 +216,20 @@ add_action( 'customize_register', function ( WP_Customize_Manager $wp ) {
 	$text( 'seo', 'seo_cuisine', 'Cuisine', 'text', 'Separate with commas.' );
 	$text( 'seo', 'local_heading', 'Home page: local heading', 'text', '{town} and {areas} work here.' );
 	$text( 'seo', 'local_text', 'Home page: local introduction', 'textarea', 'A short paragraph about your food and where you deliver — this helps Google show you to local people.' );
+	$url = function ( $key, $label, $desc ) use ( $wp ) {
+		$wp->add_setting( 'gm_' . $key, array( 'default' => '', 'sanitize_callback' => 'esc_url_raw' ) );
+		$wp->add_control( 'gm_' . $key, array( 'label' => $label, 'section' => 'gm_seo', 'type' => 'url', 'description' => $desc ) );
+	};
+	$url( 'seo_gbp', 'Google Business Profile link', 'Your listing on Google Maps (in your Business Profile, click Share and copy the link). Tells Google this website and your Maps listing are the same business.' );
+	$url( 'seo_review', 'Google review link', 'In your Business Profile, click “Ask for reviews” and copy the link. Adds a “Review us on Google” button after ordering and on the Reviews page.' );
+	$wp->add_setting( 'gm_seo_gsc', array( 'default' => '', 'sanitize_callback' => function ( $v ) {
+		if ( preg_match( '/content=["\']([^"\']+)/', (string) $v, $m ) ) {
+			$v = $m[1]; // the whole <meta> tag was pasted
+		}
+		$v = trim( wp_strip_all_tags( (string) $v ) );
+		return preg_match( '/^[A-Za-z0-9_\-]+$/', $v ) ? $v : '';
+	} ) );
+	$wp->add_control( 'gm_seo_gsc', array( 'label' => 'Google Search Console code', 'section' => 'gm_seo', 'type' => 'text', 'description' => 'In Search Console choose “URL prefix” → “HTML tag” and paste the tag (or just the code inside content="…").' ) );
 
 	$section( 'story', 'My story' );
 	$text( 'story', 'story_title', 'Title', 'text', 'Wrap words in <strong>…</strong> for bold.' );

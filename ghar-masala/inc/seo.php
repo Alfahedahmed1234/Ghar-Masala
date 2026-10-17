@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /** slug => [ view, title, description ]. {areas} = the main areas served. */
 function gm_seo_pages() {
 	return array(
-		'menu'         => array( 'menu', 'Menu — Indian & Bangladeshi Curry Delivery in {town}', 'Our menu of home-cooked Indian and Bangladeshi curries, rice, breads and sides, made fresh to order and delivered across {areas}. Halal. Pre-order online.' ),
+		'menu'         => array( 'menu', 'Indian Takeaway Menu — Curry Delivery in {main}', 'Our Indian takeaway menu: home-cooked Indian and Bangladeshi curries, rice, breads and sides, made fresh to order and delivered across {areas}. Halal. Pre-order online.' ),
 		'my-story'     => array( 'story', 'Our Story — Home-Style Bangladeshi Cooking in {town}', 'Ghar Masala means “House of Spice”. Home-style Bangladeshi and Indian food cooked fresh on the day by a local cook in {town}.' ),
 		'reviews'      => array( 'reviews', 'Reviews — What Customers Say About Ghar Masala, {town}', 'Reviews from customers in {areas} who have ordered home-cooked curry from Ghar Masala.' ),
 		'faqs'         => array( 'faq', 'FAQs — Curry Delivery in {town}', 'Questions about ordering, delivery areas, halal food, spice levels and allergens at Ghar Masala, {town}.' ),
@@ -32,11 +32,20 @@ function gm_seo_pages() {
 	);
 }
 
-/** The view a /slug/ address opens, or ''. */
+/** The view a /slug/ address opens, or ''. Area pages (/indian-takeaway-oldbury/) open the "area" view. */
 function gm_current_view() {
+	if ( function_exists( 'gm_current_area' ) && gm_current_area() ) {
+		return 'area';
+	}
 	$slug  = get_query_var( 'gm_view' );
 	$pages = gm_seo_pages();
 	return ( $slug && isset( $pages[ $slug ] ) ) ? $pages[ $slug ][0] : '';
+}
+
+/** Print " hidden" on every section except the one this address is for (the script takes over from there). */
+function gm_view_hidden( $view ) {
+	$current = gm_current_view() ? gm_current_view() : 'home';
+	echo $view === $current ? '' : ' hidden';
 }
 
 /** Is this the one-page site (home page or one of its section addresses)? */
@@ -60,8 +69,15 @@ function gm_seo_fill( $text ) {
 		array(
 			'{town}'  => gm_mod( 'seo_town' ),
 			'{areas}' => gm_seo_areas_text(),
+			'{main}'  => gm_seo_main_areas(),
 		)
 	);
+}
+
+/** The first two areas: "Tividale & Oldbury". */
+function gm_seo_main_areas() {
+	$a = array_slice( gm_seo_areas(), 0, 2 );
+	return $a ? implode( ' & ', $a ) : gm_mod( 'seo_town' );
 }
 
 function gm_seo_areas() {
@@ -119,6 +135,15 @@ add_action( 'wp', function () {
 
 function gm_seo_meta() {
 	$view = gm_current_view();
+	if ( 'area' === $view ) {
+		$slug = gm_current_area();
+		$area = gm_areas()[ $slug ];
+		return array(
+			'title' => sprintf( 'Indian Takeaway in %s — Home-Cooked Curry Delivery | Ghar Masala', $area ),
+			'desc'  => sprintf( 'Indian takeaway delivered in %1$s: fresh, home-cooked Indian & Bangladeshi curries from Ghar Masala in %2$s. Halal, no base sauce, free delivery within %3$s miles. Order online.', $area, gm_mod( 'seo_town' ), gm_number( gm_delivery_rules()['free_miles'] ) ),
+			'url'   => gm_area_url( $slug ),
+		);
+	}
 	if ( $view ) {
 		foreach ( gm_seo_pages() as $slug => $p ) {
 			if ( $p[0] === $view ) {
@@ -170,6 +195,17 @@ add_action( 'wp_head', function () {
 		printf( '<meta property="og:image" content="%s">' . "\n", esc_url( $image ) );
 		printf( '<meta name="twitter:card" content="summary_large_image">' . "\n" );
 	}
+	$verify = trim( wp_strip_all_tags( (string) gm_mod( 'seo_gsc' ) ) );
+	if ( preg_match( '/content=["\']([^"\']+)/', $verify, $mm ) ) {
+		$verify = $mm[1]; // they pasted the whole <meta> tag
+	}
+	if ( '' !== $verify && preg_match( '/^[A-Za-z0-9_\-]+$/', $verify ) ) {
+		printf( '<meta name="google-site-verification" content="%s">' . "\n", esc_attr( $verify ) );
+	}
+	if ( is_front_page() && ! gm_current_view() ) {
+		// The main photo is the biggest thing on the home page: start loading it straight away.
+		printf( '<link rel="preload" as="image" href="%s" fetchpriority="high">' . "\n", esc_url( $image ) );
+	}
 	$geo = gm_seo_geo();
 	echo '<meta name="geo.region" content="GB-SAW">' . "\n";
 	printf( '<meta name="geo.placename" content="%s">' . "\n", esc_attr( gm_mod( 'seo_town' ) ) );
@@ -206,6 +242,18 @@ function gm_seo_geo() {
 	);
 	update_option( 'gm_seo_geo', $geo, false );
 	return $geo;
+}
+
+/** The Google Business Profile / Google Maps link, if set. */
+function gm_seo_gbp_url() {
+	$u = esc_url_raw( trim( (string) gm_mod( 'seo_gbp' ) ) );
+	return preg_match( '#^https://#', $u ) ? $u : '';
+}
+
+/** The "write a Google review" link, if set. */
+function gm_google_review_url() {
+	$u = esc_url_raw( trim( (string) gm_mod( 'seo_review' ) ) );
+	return preg_match( '#^https://#', $u ) ? $u : '';
 }
 
 function gm_social_profiles() {
@@ -276,7 +324,7 @@ function gm_seo_schema() {
 				'closes'    => $s['close'],
 			),
 		),
-		'sameAs'                    => gm_social_profiles(),
+		'sameAs'                    => array_values( array_filter( array_merge( gm_social_profiles(), array( gm_seo_gbp_url() ) ) ) ),
 		'potentialAction'           => array(
 			'@type'  => 'OrderAction',
 			'target' => array(
@@ -287,6 +335,9 @@ function gm_seo_schema() {
 			'deliveryMethod' => 'http://purl.org/goodrelations/v1#DeliveryModeOwnFleet',
 		),
 	);
+	if ( gm_seo_gbp_url() ) {
+		$business['hasMap'] = gm_seo_gbp_url();
+	}
 	if ( $geo ) {
 		$business['geo'] = array( '@type' => 'GeoCoordinates', 'latitude' => $geo['lat'], 'longitude' => $geo['lng'] );
 	}
@@ -324,6 +375,32 @@ function gm_seo_schema() {
 			'inLanguage'     => 'en-GB',
 			'hasMenuSection' => $sections,
 		);
+	}
+	if ( 'area' === $view ) {
+		$slug = gm_current_area();
+		$area = gm_areas()[ $slug ];
+		$url  = gm_area_url( $slug );
+		$out[] = array(
+			'@context'   => 'https://schema.org',
+			'@type'      => 'WebPage',
+			'@id'        => $url . '#page',
+			'url'        => $url,
+			'name'       => 'Indian Takeaway in ' . $area,
+			'inLanguage' => 'en-GB',
+			'about'      => array( '@id' => $id ),
+			'breadcrumb' => array(
+				'@type'           => 'BreadcrumbList',
+				'itemListElement' => array(
+					array( '@type' => 'ListItem', 'position' => 1, 'name' => 'Home', 'item' => $home ),
+					array( '@type' => 'ListItem', 'position' => 2, 'name' => 'Indian takeaway in ' . $area, 'item' => $url ),
+				),
+			),
+		);
+		$qa = array();
+		foreach ( gm_area_faqs( $slug ) as $q => $a ) {
+			$qa[] = array( '@type' => 'Question', 'name' => $q, 'acceptedAnswer' => array( '@type' => 'Answer', 'text' => $a ) );
+		}
+		$out[] = array( '@context' => 'https://schema.org', '@type' => 'FAQPage', 'mainEntity' => $qa );
 	}
 	if ( 'faq' === $view ) {
 		$qa = array();
@@ -365,6 +442,9 @@ add_action( 'wp_sitemaps_init', function ( $sitemaps ) {
 				$list = array( array( 'loc' => home_url( '/' ) ) );
 				foreach ( array_keys( gm_seo_pages() ) as $slug ) {
 					$list[] = array( 'loc' => home_url( '/' . $slug . '/' ) );
+				}
+				foreach ( array_keys( gm_areas() ) as $slug ) {
+					$list[] = array( 'loc' => gm_area_url( $slug ) );
 				}
 				return $list;
 			}

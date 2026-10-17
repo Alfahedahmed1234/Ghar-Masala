@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'GM_VERSION', '1.17.0' );
+define( 'GM_VERSION', '1.18.0' );
 
 /** Cache-busting version: changes whenever the file does. */
 function gm_ver( $file ) {
@@ -42,6 +42,7 @@ require get_template_directory() . '/inc/banners.php';
 require get_template_directory() . '/inc/rewards.php';
 require get_template_directory() . '/inc/customizer.php';
 require get_template_directory() . '/inc/seo.php';
+require get_template_directory() . '/inc/areas.php';
 require get_template_directory() . '/inc/seasonal.php';
 require get_template_directory() . '/inc/delivery.php';
 require get_template_directory() . '/inc/accounts.php';
@@ -245,6 +246,9 @@ function gm_view_paths() {
 	$out = array( wp_make_link_relative( home_url( '/' ) ) => 'home' );
 	foreach ( gm_seo_pages() as $slug => $p ) {
 		$out[ wp_make_link_relative( home_url( '/' . $slug . '/' ) ) ] = $p[0];
+	}
+	if ( gm_current_area() ) {
+		$out[ wp_make_link_relative( gm_area_url( gm_current_area() ) ) ] = 'area';
 	}
 	return $out;
 }
